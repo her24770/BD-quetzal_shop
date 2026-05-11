@@ -5,6 +5,7 @@
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
+  import { filtrosProveedores } from '$lib/stores/filtros';
 
   interface Proveedor { id: number; nombre: string; telefono: string; email: string; direccion: string; }
 
@@ -69,10 +70,18 @@
     }
   }
 
+  $: proveedoresFiltrados = proveedores.filter(p => {
+    const q = $filtrosProveedores.busqueda.toLowerCase();
+    return !q || p.nombre.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
+  });
+  $: hayFiltros = $filtrosProveedores.busqueda !== '';
+
+  function onBusqueda(e: Event) { filtrosProveedores.set({ busqueda: (e.target as HTMLInputElement).value }); }
+
   function exportarCSV() {
     exportCsv('proveedores.csv',
       ['ID', 'Nombre', 'Telefono', 'Email', 'Direccion'],
-      proveedores.map(p => [p.id, p.nombre, p.telefono, p.email, p.direccion])
+      proveedoresFiltrados.map(p => [p.id, p.nombre, p.telefono, p.email, p.direccion])
     );
   }
 
@@ -138,9 +147,18 @@
 
 <div class="section-header">
   <h2 class="page-title">Proveedores</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={proveedores.length === 0}>
+  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={proveedoresFiltrados.length === 0}>
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
+</div>
+
+<div class="filtros-bar">
+  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre o email…"
+    value={$filtrosProveedores.busqueda} on:input={onBusqueda} />
+  {#if hayFiltros}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosProveedores.reset()}>Limpiar</button>
+  {/if}
+  <span class="filtro-count">{proveedoresFiltrados.length} de {proveedores.length}</span>
 </div>
 
 {#if loading}
@@ -158,10 +176,10 @@
         </tr>
       </thead>
       <tbody>
-        {#if proveedores.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>Sin proveedores registrados</td></tr>
+        {#if proveedoresFiltrados.length === 0}
+          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}</td></tr>
         {:else}
-          {#each proveedores as p}
+          {#each proveedoresFiltrados as p}
             <tr class:row-selected={form.id === p.id && mode === 'edit'}>
               <td><span class="cell-main">{p.nombre}</span></td>
               <td>{p.telefono}</td>
@@ -194,6 +212,9 @@
   .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
   .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
   .form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
+  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
   .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
   .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }

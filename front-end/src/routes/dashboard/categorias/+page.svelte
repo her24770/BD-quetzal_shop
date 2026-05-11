@@ -4,6 +4,7 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
+  import { filtrosCategorias } from '$lib/stores/filtros';
 
   interface Categoria { id: number; nombre: string; descripcion: string; }
 
@@ -68,6 +69,14 @@
     }
   }
 
+  $: categoriasFiltradas = categorias.filter(c => {
+    const q = $filtrosCategorias.busqueda.toLowerCase();
+    return !q || c.nombre.toLowerCase().includes(q);
+  });
+  $: hayFiltros = $filtrosCategorias.busqueda !== '';
+
+  function onBusqueda(e: Event) { filtrosCategorias.set({ busqueda: (e.target as HTMLInputElement).value }); }
+
   async function deleteItem(id: number) {
     errorMsg = '';
     const res = await apiFetch(`/categorias/${id}`, token, { method: 'DELETE' });
@@ -125,6 +134,15 @@
   <h2 class="page-title">Categorías</h2>
 </div>
 
+<div class="filtros-bar">
+  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
+    value={$filtrosCategorias.busqueda} on:input={onBusqueda} />
+  {#if hayFiltros}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosCategorias.reset()}>Limpiar</button>
+  {/if}
+  <span class="filtro-count">{categoriasFiltradas.length} de {categorias.length}</span>
+</div>
+
 {#if loading}
   <div class="loading-msg">Cargando categorías…</div>
 {:else}
@@ -138,10 +156,10 @@
         </tr>
       </thead>
       <tbody>
-        {#if categorias.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 3 : 2}>Sin categorías registradas</td></tr>
+        {#if categoriasFiltradas.length === 0}
+          <tr class="empty-row"><td colspan={isAdmin ? 3 : 2}>{hayFiltros ? 'Sin coincidencias' : 'Sin categorías registradas'}</td></tr>
         {:else}
-          {#each categorias as c}
+          {#each categoriasFiltradas as c}
             <tr class:row-selected={form.id === c.id && mode === 'edit'}>
               <td><span class="cell-main">{c.nombre}</span></td>
               <td><span class="cell-sub">{c.descripcion}</span></td>
@@ -172,6 +190,9 @@
   .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
   .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
   .form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
+  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
   .section-header { margin-bottom:14px; }
   .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
   .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }

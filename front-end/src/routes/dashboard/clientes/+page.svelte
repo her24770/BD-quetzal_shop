@@ -5,6 +5,7 @@
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
+  import { filtrosClientes } from '$lib/stores/filtros';
 
   interface Cliente { id: number; nombre: string; nit: string; telefono: string; direccion: string; }
 
@@ -69,10 +70,18 @@
     }
   }
 
+  $: clientesFiltrados = clientes.filter(c => {
+    const q = $filtrosClientes.busqueda.toLowerCase();
+    return !q || c.nombre.toLowerCase().includes(q) || c.nit.toLowerCase().includes(q);
+  });
+  $: hayFiltros = $filtrosClientes.busqueda !== '';
+
+  function onBusqueda(e: Event) { filtrosClientes.set({ busqueda: (e.target as HTMLInputElement).value }); }
+
   function exportarCSV() {
     exportCsv('clientes.csv',
       ['ID', 'Nombre', 'NIT', 'Telefono', 'Direccion'],
-      clientes.map(c => [c.id, c.nombre, c.nit, c.telefono, c.direccion])
+      clientesFiltrados.map(c => [c.id, c.nombre, c.nit, c.telefono, c.direccion])
     );
   }
 
@@ -138,9 +147,18 @@
 
 <div class="section-header">
   <h2 class="page-title">Clientes</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={clientes.length === 0}>
+  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={clientesFiltrados.length === 0}>
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
+</div>
+
+<div class="filtros-bar">
+  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre o NIT…"
+    value={$filtrosClientes.busqueda} on:input={onBusqueda} />
+  {#if hayFiltros}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosClientes.reset()}>Limpiar</button>
+  {/if}
+  <span class="filtro-count">{clientesFiltrados.length} de {clientes.length}</span>
 </div>
 
 {#if loading}
@@ -158,10 +176,10 @@
         </tr>
       </thead>
       <tbody>
-        {#if clientes.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>Sin clientes registrados</td></tr>
+        {#if clientesFiltrados.length === 0}
+          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}</td></tr>
         {:else}
-          {#each clientes as c}
+          {#each clientesFiltrados as c}
             <tr class:row-selected={form.id === c.id && mode === 'edit'}>
               <td><span class="cell-main">{c.nombre}</span></td>
               <td><span class="cell-mono">{c.nit}</span></td>
@@ -194,6 +212,9 @@
   .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
   .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
   .form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
+  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
   .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
   .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }

@@ -5,6 +5,7 @@
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
+  import { filtrosEmpleados } from '$lib/stores/filtros';
 
   interface Empleado {
     id: number; usuario_id: number; dpi: string; nombre: string;
@@ -25,6 +26,18 @@
     else errorMsg = 'Error al cargar empleados';
     loading = false;
   });
+
+  $: empleadosFiltrados = empleados.filter(e => {
+    const q   = $filtrosEmpleados.busqueda.toLowerCase();
+    const est = $filtrosEmpleados.estado;
+    const matchBusqueda = !q || e.nombre.toLowerCase().includes(q);
+    const matchEstado   = est === 'todos' || e.estado === est;
+    return matchBusqueda && matchEstado;
+  });
+  $: hayFiltros = $filtrosEmpleados.busqueda !== '' || $filtrosEmpleados.estado !== 'todos';
+
+  function onBusqueda(e: Event)  { filtrosEmpleados.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  function onEstado(e: Event)    { filtrosEmpleados.set({ estado: (e.target as HTMLSelectElement).value }); }
 
   async function deleteItem(id: number) {
     errorMsg = '';
@@ -53,9 +66,23 @@
 
 <div class="section-header">
   <h2 class="page-title">Empleados</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={empleados.length === 0}>
+  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={empleadosFiltrados.length === 0}>
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
+</div>
+
+<div class="filtros-bar">
+  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
+    value={$filtrosEmpleados.busqueda} on:input={onBusqueda} />
+  <select class="qz-input filtro-select" value={$filtrosEmpleados.estado} on:change={onEstado}>
+    <option value="todos">Todos los estados</option>
+    <option value="activo">Activo</option>
+    <option value="inactivo">Inactivo</option>
+  </select>
+  {#if hayFiltros}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosEmpleados.reset()}>Limpiar</button>
+  {/if}
+  <span class="filtro-count">{empleadosFiltrados.length} de {empleados.length}</span>
 </div>
 
 {#if errorMsg}
@@ -81,10 +108,10 @@
         </tr>
       </thead>
       <tbody>
-        {#if empleados.length === 0}
-          <tr class="empty-row"><td colspan="9">Sin empleados registrados</td></tr>
+        {#if empleadosFiltrados.length === 0}
+          <tr class="empty-row"><td colspan="9">{hayFiltros ? 'Sin coincidencias' : 'Sin empleados registrados'}</td></tr>
         {:else}
-          {#each empleados as e}
+          {#each empleadosFiltrados as e}
             <tr>
               <td><span class="cell-main">{e.nombre}</span></td>
               <td><span class="cell-mono">{e.dpi}</span></td>
@@ -114,6 +141,10 @@
 {/if}
 
 <style>
+  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .filtro-busqueda { flex:1; min-width:180px; max-width:260px; }
+  .filtro-select { min-width:160px; }
+  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
   .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
   .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }

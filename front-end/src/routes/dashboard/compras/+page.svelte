@@ -5,6 +5,7 @@
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
+  import { filtrosCompras } from '$lib/stores/filtros';
 
   interface Compra {
     id: number; fecha: string; total: number; numero_factura: string; empleado: string;
@@ -28,10 +29,18 @@
     loading = false;
   });
 
+  $: comprasFiltradas = compras.filter(c => {
+    const q = $filtrosCompras.busqueda.toLowerCase();
+    return !q || c.numero_factura.toLowerCase().includes(q) || c.empleado.toLowerCase().includes(q);
+  });
+  $: hayFiltros = $filtrosCompras.busqueda !== '';
+
+  function onBusqueda(e: Event) { filtrosCompras.set({ busqueda: (e.target as HTMLInputElement).value }); }
+
   function exportarCSV() {
     exportCsv('compras.csv',
       ['ID', 'Fecha', 'No. Factura', 'Empleado', 'Total'],
-      compras.map(c => [c.id, c.fecha, c.numero_factura, c.empleado, c.total])
+      comprasFiltradas.map(c => [c.id, c.fecha, c.numero_factura, c.empleado, c.total])
     );
   }
 </script>
@@ -40,9 +49,18 @@
 
 <div class="section-header">
   <h2 class="page-title">Compras</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={compras.length === 0}>
+  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={comprasFiltradas.length === 0}>
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
+</div>
+
+<div class="filtros-bar">
+  <input class="qz-input filtro-busqueda" placeholder="Buscar por factura o empleado…"
+    value={$filtrosCompras.busqueda} on:input={onBusqueda} />
+  {#if hayFiltros}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosCompras.reset()}>Limpiar</button>
+  {/if}
+  <span class="filtro-count">{comprasFiltradas.length} de {compras.length}</span>
 </div>
 
 {#if errorMsg}
@@ -64,10 +82,10 @@
         </tr>
       </thead>
       <tbody>
-        {#if compras.length === 0}
-          <tr class="empty-row"><td colspan="5">Sin compras registradas</td></tr>
+        {#if comprasFiltradas.length === 0}
+          <tr class="empty-row"><td colspan="5">{hayFiltros ? 'Sin coincidencias' : 'Sin compras registradas'}</td></tr>
         {:else}
-          {#each compras as c}
+          {#each comprasFiltradas as c}
             <tr>
               <td><span class="cell-id">#{c.id}</span></td>
               <td>{formatFecha(c.fecha)}</td>
@@ -83,6 +101,9 @@
 {/if}
 
 <style>
+  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
+  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
   .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
   .page-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }

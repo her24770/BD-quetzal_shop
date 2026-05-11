@@ -3,6 +3,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
+  import { filtrosProducto } from '$lib/stores/filtros';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
 
@@ -36,6 +37,19 @@
   $: isAdmin = $auth.user?.rol_id === 1;
   $: token   = $auth.token ?? '';
 
+  // Lista filtrada reactiva — se recalcula cada vez que cambia el store o los datos
+  $: productosFiltrados = productos.filter(p => {
+    const st = stockStatus(p);
+    const matchBusqueda   = !$filtrosProducto.busqueda     || p.nombre.toLowerCase().includes($filtrosProducto.busqueda.toLowerCase());
+    const matchCategoria  = !$filtrosProducto.categoria_id || p.categoria_id === Number($filtrosProducto.categoria_id);
+    const matchStock      = $filtrosProducto.stock_status === 'todos' || st === $filtrosProducto.stock_status;
+    return matchBusqueda && matchCategoria && matchStock;
+  });
+
+  $: hayFiltrosActivos = $filtrosProducto.busqueda !== '' ||
+                         $filtrosProducto.categoria_id !== '' ||
+                         $filtrosProducto.stock_status !== 'todos';
+
   onMount(async () => {
     const [r1, r2] = await Promise.all([
       apiFetch('/productos',  token),
@@ -52,7 +66,6 @@
     if (r.ok) productos = await r.json();
   }
 
-  // Rellena el formulario en modo edición y hace scroll hasta él
   function startEdit(p: Producto) {
     form = {
       id:           p.id,
@@ -65,7 +78,6 @@
     };
     mode = 'edit';
     errorMsg = '';
-    // scrollIntoView sube por el contenedor real (.shell__main), no el window
     setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   }
 
@@ -131,9 +143,13 @@
   function exportarCSV() {
     exportCsv('productos.csv',
       ['ID', 'Nombre', 'Descripcion', 'Categoria', 'Precio', 'Stock', 'Stock Minimo'],
-      productos.map(p => [p.id, p.nombre, p.descripcion, p.categoria, p.precio, p.stock, p.stock_minimo])
+      productosFiltrados.map(p => [p.id, p.nombre, p.descripcion, p.categoria, p.precio, p.stock, p.stock_minimo])
     );
   }
+
+  function onBusqueda(e: Event)     { filtrosProducto.setBusqueda((e.target as HTMLInputElement).value); }
+  function onCategoria(e: Event)    { filtrosProducto.setCategoria((e.target as HTMLSelectElement).value); }
+  function onStockStatus(e: Event)  { filtrosProducto.setStockStatus((e.target as HTMLSelectElement).value as any); }
 </script>
 
 <svelte:head><title>Productos — QuetzalShop</title></svelte:head>
@@ -205,12 +221,51 @@
   </div>
 {/if}
 
-<!-- Encabezado de sección -->
+<!-- Encabezado + filtros -->
 <div class="section-header">
   <h2 class="page-title">Productos</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={productos.length === 0}>
+  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={productosFiltrados.length === 0}>
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
+</div>
+
+<div class="filtros-bar">
+  <input
+    class="qz-input filtro-busqueda"
+    placeholder="Buscar por nombre…"
+    value={$filtrosProducto.busqueda}
+    on:input={onBusqueda}
+  />
+
+  <select
+    class="qz-input filtro-select"
+    value={$filtrosProducto.categoria_id}
+    on:change={onCategoria}
+  >
+    <option value="">Todas las categorías</option>
+    {#each categorias as c}
+      <option value={String(c.id)}>{c.nombre}</option>
+    {/each}
+  </select>
+
+  <select
+    class="qz-input filtro-select"
+    value={$filtrosProducto.stock_status}
+    on:change={onStockStatus}
+  >
+    <option value="todos">Todo el stock</option>
+    <option value="ok">Stock OK</option>
+    <option value="bajo">Stock bajo</option>
+    <option value="agotado">Agotado</option>
+  </select>
+
+  {#if hayFiltrosActivos}
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosProducto.reset()}>
+      Limpiar filtros
+    </button>
+  {/if}
+
+  <span class="filtro-count">{productosFiltrados.length} de {productos.length}</span>
 </div>
 
 <!-- Tabla -->
@@ -230,12 +285,14 @@
         </tr>
       </thead>
       <tbody>
-        {#if productos.length === 0}
+        {#if productosFiltrados.length === 0}
           <tr class="empty-row">
-            <td colspan={isAdmin ? 6 : 5}>Sin productos registrados</td>
+            <td colspan={isAdmin ? 6 : 5}>
+              {hayFiltrosActivos ? 'Sin productos que coincidan con los filtros' : 'Sin productos registrados'}
+            </td>
           </tr>
         {:else}
-          {#each productos as p}
+          {#each productosFiltrados as p}
             {@const st = stockStatus(p)}
             <tr class:row-selected={form.id === p.id && mode === 'edit'}>
               <td><span class="cell-main">{p.nombre}</span></td>
@@ -315,6 +372,18 @@
 
   .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .page-title { font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
+
+  /* Barra de filtros */
+  .filtros-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .filtro-busqueda { flex: 1; min-width: 180px; max-width: 260px; }
+  .filtro-select   { min-width: 160px; }
+  .filtro-count    { font-size: 12px; color: #9CA3AF; margin-left: auto; white-space: nowrap; }
 
   .loading-msg { color: #9CA3AF; font-size: 14px; padding: 20px 0; }
   .cell-main   { font-weight: 500; color: #111827; }
