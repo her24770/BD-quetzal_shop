@@ -1,4 +1,4 @@
-# QuetzalShop — Sistema gestion de data
+# QuetzalShop — Sistema de gestion de tienda
 
 Proyecto 2 — cc3088 Bases de Datos 1 | UVG Ciclo 1 2026
 
@@ -23,8 +23,6 @@ cd BD-quetzal_shop
 ```
 
 ### 2. Crear el archivo de variables de entorno
-
-Copiar el archivo de ejemplo y ajustar si se desea cambiar puertos:
 
 ```bash
 cp .env.example .env
@@ -65,7 +63,7 @@ No es necesario cambiar ningun valor para ejecutar el proyecto en desarrollo loc
 docker compose up
 ```
 
-Docker Compose construira las imagenes y levantara tres servicios en orden:
+Docker Compose construye las imagenes y levanta tres servicios en orden:
 
 1. **db** — PostgreSQL 15. Al iniciarse por primera vez carga automaticamente `schema.sql`, `views.sql` y `seed.sql`, creando tablas, vistas y datos de prueba.
 2. **backend** — FastAPI en `http://localhost:8000`. Espera a que la base de datos este lista (healthcheck) antes de arrancar.
@@ -93,11 +91,11 @@ docker compose down -v
 
 ## URLs de acceso
 
-| Servicio   | URL                          |
-|------------|------------------------------|
-| Frontend   | http://localhost:5173        |
-| Backend API| http://localhost:8000        |
-| Docs API   | http://localhost:8000/docs   |
+| Servicio        | URL                        |
+|-----------------|----------------------------|
+| Frontend        | http://localhost:5173      |
+| Backend API     | http://localhost:8000      |
+| Documentacion   | http://localhost:8000/docs |
 
 ---
 
@@ -105,11 +103,11 @@ docker compose down -v
 
 ### Acceso a la aplicacion web
 
-| Rol       | Correo                      | Contrasena |
-|-----------|-----------------------------|------------|
-| Admin     | admin@quetzalshop.com       | admin123   |
-| Cajero    | cajero1@quetzalshop.com     | cajero123  |
-| Bodeguero | bodeguero1@quetzalshop.com  | bodega123  |
+| Rol       | Correo                     | Contrasena |
+|-----------|----------------------------|------------|
+| Admin     | admin@quetzalshop.com      | admin123   |
+| Cajero    | cajero1@quetzalshop.com    | cajero123  |
+| Bodeguero | bodeguero1@quetzalshop.com | bodega123  |
 
 ### Acceso directo a la base de datos
 
@@ -125,45 +123,73 @@ docker compose down -v
 
 ## Roles y permisos
 
-| Modulo        | Admin (1) | Cajero (2) | Bodeguero (3) |
-|---------------|:---------:|:----------:|:-------------:|
-| Dashboard     | si        | si         | si            |
-| Productos     | CRUD      | lectura    | CRUD          |
-| Categorias    | CRUD      | --         | lectura       |
-| Proveedores   | CRUD      | --         | lectura       |
-| Clientes      | CRUD      | CRUD       | --            |
-| Transacciones | ventas + compras | solo ventas | solo compras |
-| Empleados     | CRUD      | --         | --            |
+| Modulo        | Admin (1)       | Cajero (2)   | Bodeguero (3) |
+|---------------|:---------------:|:------------:|:-------------:|
+| Dashboard     | si              | si           | si            |
+| Productos     | CRUD            | lectura      | CRUD          |
+| Categorias    | CRUD            | --           | lectura       |
+| Proveedores   | CRUD            | --           | lectura       |
+| Clientes      | CRUD            | CRUD         | --            |
+| Transacciones | ventas + compras| solo ventas  | solo compras  |
+| Historial     | ventas + compras| solo ventas  | solo compras  |
+| Empleados     | CRUD            | --           | --            |
 
 ---
 
 ## Estructura del proyecto
 
 ```
-quetzal_shop-backend/
+BD-quetzal_shop/
 ├── back-end/
 │   ├── database/
-│   │   ├── connection.py       # Pool de conexiones psycopg2
-│   │   └── queries/            # SQL por entidad + reportes
-│   ├── controllers/            # Logica de negocio
-│   ├── routes/                 # Endpoints FastAPI
-│   ├── schemas/                # Modelos Pydantic
+│   │   ├── connection.py          # Pool de conexiones psycopg2
+│   │   └── queries/               # SQL por entidad + reportes
+│   ├── controllers/               # Logica de negocio
+│   ├── routes/                    # Endpoints FastAPI
+│   ├── schemas/                   # Modelos Pydantic
 │   ├── sql/
-│   │   ├── schema.sql          # DDL — tablas, indices, constraints
-│   │   ├── views.sql           # Vistas SQL
-│   │   └── seed.sql            # Datos de prueba (25+ registros)
+│   │   ├── schema.sql             # DDL — tablas, indices, constraints
+│   │   ├── views.sql              # Vistas SQL
+│   │   └── seed.sql               # Datos de prueba (25+ registros)
 │   ├── Dockerfile
 │   ├── main.py
 │   └── requirements.txt
 ├── front-end/
 │   ├── src/
+│   │   ├── app.css                # Tokens de diseño, utilidades globales, dark mode
 │   │   ├── lib/
-│   │   │   ├── components/     # StatCard, Sidebar, Navbar, etc.
-│   │   │   ├── stores/         # auth store (Svelte writable)
-│   │   │   └── api.ts          # apiFetch helper
+│   │   │   ├── api.ts             # Helper apiFetch con auth header
+│   │   │   ├── csv.ts             # Exportacion CSV
+│   │   │   ├── icons.ts           # Paths SVG de iconos
+│   │   │   ├── components/
+│   │   │   │   ├── Icon.svelte    # Icono SVG generico
+│   │   │   │   ├── Modal.svelte   # Ventana modal reutilizable
+│   │   │   │   ├── Navbar.svelte  # Barra superior con menu hamburguesa
+│   │   │   │   ├── Sidebar.svelte # Navegacion lateral (slide-in en movil)
+│   │   │   │   ├── StatCard.svelte# Tarjeta de estadistica
+│   │   │   │   └── Toast.svelte   # Notificaciones flotantes
+│   │   │   └── stores/
+│   │   │       ├── auth.ts        # Sesion y token JWT
+│   │   │       ├── filtros.ts     # Estado de filtros por pagina
+│   │   │       └── theme.ts       # Tema claro/oscuro con persistencia
 │   │   └── routes/
-│   │       ├── +page.svelte    # Login
-│   │       └── dashboard/      # Paginas protegidas por rol
+│   │       ├── +layout.svelte     # Root layout
+│   │       ├── +page.svelte       # Login
+│   │       └── dashboard/
+│   │           ├── +layout.svelte # Shell autenticado (Navbar + Sidebar)
+│   │           ├── +page.svelte   # Dashboard con reportes
+│   │           ├── productos/     # CRUD de productos con filtros
+│   │           ├── categorias/    # CRUD de categorias
+│   │           ├── proveedores/   # CRUD de proveedores
+│   │           ├── clientes/      # CRUD de clientes
+│   │           ├── empleados/     # CRUD de empleados
+│   │           ├── transacciones/ # Formulario nueva venta / compra
+│   │           ├── historial/     # Historial de ventas y compras (solo lectura)
+│   │           ├── ventas/        # Vista de ventas
+│   │           └── compras/       # Vista de compras
+│   ├── tests/
+│   │   ├── utils.test.ts          # Tests de funciones utilitarias
+│   │   └── csv.test.ts            # Tests de exportacion CSV
 │   ├── Dockerfile
 │   └── package.json
 ├── doc/
@@ -203,11 +229,13 @@ Todos los endpoints retornan codigos HTTP correctos: `200` exito, `201` creacion
 **Endpoint de agregacion de datos**
 El router `/reportes` expone cinco endpoints que agregan datos reales de la base de datos:
 
-- `GET /reportes/stats` — total de ventas del dia, compras del mes, empleados activos y productos con stock bajo
-- `GET /reportes/top-productos` — top 5 productos mas vendidos usando CTE y GROUP BY
-- `GET /reportes/ventas-por-metodo` — ventas agrupadas por metodo de pago con GROUP BY y HAVING
-- `GET /reportes/clientes-activos` — clientes con al menos una venta usando subquery EXISTS
-- `GET /reportes/productos-bajo-vendidos` — productos con stock critico que han sido vendidos usando subquery IN
+| Endpoint | Tecnica SQL | Descripcion |
+|---|---|---|
+| `GET /reportes/stats` | agregaciones simples | ventas del dia, compras del mes, stock bajo, empleados activos |
+| `GET /reportes/top-productos` | CTE + GROUP BY | top 5 productos mas vendidos por unidades e ingresos |
+| `GET /reportes/ventas-por-metodo` | GROUP BY + HAVING | ventas agrupadas por metodo de pago |
+| `GET /reportes/clientes-activos` | subquery EXISTS | clientes con al menos una venta registrada |
+| `GET /reportes/productos-bajo-vendidos` | subquery IN | productos con stock critico que han sido vendidos |
 
 ---
 
@@ -216,7 +244,7 @@ El router `/reportes` expone cinco endpoints que agregan datos reales de la base
 El proyecto usa SvelteKit como framework frontend. A continuacion se documenta el concepto de React que exige la rubrica y su equivalente directo en Svelte.
 
 **Navegacion entre vistas → SvelteKit file-based routing**
-React Router define rutas con `<Route path="...">`. SvelteKit usa el sistema de archivos: cada archivo `+page.svelte` dentro de `src/routes/` es automaticamente una ruta. El proyecto tiene 10 rutas distintas:
+React Router define rutas con `<Route path="...">`. SvelteKit usa el sistema de archivos: cada archivo `+page.svelte` dentro de `src/routes/` es automaticamente una ruta. El proyecto tiene 11 rutas distintas:
 
 | Ruta | Archivo |
 |------|---------|
@@ -227,9 +255,10 @@ React Router define rutas con `<Route path="...">`. SvelteKit usa el sistema de 
 | `/dashboard/clientes` | `src/routes/dashboard/clientes/+page.svelte` |
 | `/dashboard/proveedores` | `src/routes/dashboard/proveedores/+page.svelte` |
 | `/dashboard/empleados` | `src/routes/dashboard/empleados/+page.svelte` |
+| `/dashboard/transacciones` | `src/routes/dashboard/transacciones/+page.svelte` |
+| `/dashboard/historial` | `src/routes/dashboard/historial/+page.svelte` |
 | `/dashboard/ventas` | `src/routes/dashboard/ventas/+page.svelte` |
 | `/dashboard/compras` | `src/routes/dashboard/compras/+page.svelte` |
-| `/dashboard/transacciones` | `src/routes/dashboard/transacciones/+page.svelte` |
 
 La navegacion protegida (redireccion si no hay sesion activa) se maneja en `src/routes/dashboard/+layout.svelte`.
 
@@ -258,7 +287,7 @@ onMount(async () => {
 ```
 
 **Flujo de estado complejo con useReducer → custom store con acciones**
-`useReducer` centraliza el estado y lo modifica solo mediante `dispatch({ type, payload })`. En Svelte el patron equivalente es un custom store que expone metodos nombrados en lugar de un dispatch generico. Implementado en `src/lib/stores/filtros.ts` para todas las paginas del dashboard:
+`useReducer` centraliza el estado y lo modifica solo mediante `dispatch({ type, payload })`. En Svelte el patron equivalente es un custom store que expone metodos nombrados. Implementado en `src/lib/stores/filtros.ts` para todas las paginas del dashboard:
 
 ```js
 // Svelte — equivalente a useReducer
@@ -266,10 +295,10 @@ function createFiltrosProductoStore() {
   const { subscribe, set, update } = writable({ busqueda: '', categoria_id: '', stock_status: 'todos' });
   return {
     subscribe,
-    setBusqueda:    (v)  => update(s => ({ ...s, busqueda: v })),       // accion SET_BUSQUEDA
-    setCategoria:   (id) => update(s => ({ ...s, categoria_id: id })),  // accion SET_CATEGORIA
-    setStockStatus: (v)  => update(s => ({ ...s, stock_status: v })),   // accion SET_STOCK
-    reset:          ()   => set({ busqueda: '', categoria_id: '', stock_status: 'todos' }), // accion RESET
+    setBusqueda:    (v)  => update(s => ({ ...s, busqueda: v })),
+    setCategoria:   (id) => update(s => ({ ...s, categoria_id: id })),
+    setStockStatus: (v)  => update(s => ({ ...s, stock_status: v })),
+    reset:          ()   => set({ busqueda: '', categoria_id: '', stock_status: 'todos' }),
   };
 }
 ```
@@ -277,32 +306,33 @@ function createFiltrosProductoStore() {
 Este patron se aplica en las paginas de productos, ventas, compras, clientes, categorias, proveedores y empleados.
 
 **Formularios controlados con validacion → bind:value + validacion en submit**
-React usa `value={state}` + `onChange` para formularios controlados. Svelte usa `bind:value` que sincroniza automaticamente el input con la variable. La validacion ocurre en `saveForm()` antes de llamar a la API, mostrando el mensaje de error en pantalla si algun campo requerido esta vacio.
+React usa `value={state}` + `onChange` para formularios controlados. Svelte usa `bind:value` que sincroniza automaticamente el input con la variable. La validacion ocurre en `saveForm()` antes de llamar a la API, mostrando el mensaje de error si algun campo requerido esta vacio.
 
 ```js
-// Validacion del lado del cliente antes de enviar al backend
 if (!form.nombre || !form.precio || !form.stock) {
   errorMsg = 'Completa todos los campos obligatorios';
   return;
 }
 ```
 
+Los formularios de creacion y edicion se presentan en ventanas modales (`Modal.svelte`) en todas las paginas con CRUD.
+
 **Reporte visible con datos reales → Dashboard**
 El dashboard (`/dashboard`) muestra cinco reportes con datos reales consumidos desde los endpoints de `/reportes`:
 
 1. Tarjetas de estadisticas — ventas del dia, stock bajo, compras del mes, empleados activos
-2. Top 5 productos mas vendidos con unidades e ingresos
-3. Ultimas ventas registradas
-4. Ventas agrupadas por metodo de pago
-5. Productos con stock critico que han sido vendidos
+2. Top 5 productos mas vendidos con unidades e ingresos totales
+3. Ultimas ventas registradas con cliente, empleado y metodo de pago
+4. Ventas agrupadas por metodo de pago (GROUP BY + HAVING)
+5. Productos con stock critico que han sido vendidos (subquery IN)
 
-Cada reporte indica la tecnica SQL que lo produce (CTE, GROUP BY, EXISTS, IN, VIEW).
+Cada reporte muestra la tecnica SQL que lo produce (CTE, GROUP BY, EXISTS, IN, VIEW).
 
 **Manejo visible de errores → mensajes en pantalla**
 Cada pagina con operaciones CRUD muestra errores directamente en la interfaz sin recargar la pagina:
 
-- `form-error` — error de validacion o respuesta fallida del servidor, aparece dentro del formulario
-- `page-error` — error al cargar datos, aparece antes de la tabla
+- `form-error` — error de validacion o respuesta fallida del servidor, aparece dentro del modal
+- `page-error` — error al eliminar o al cargar datos, aparece antes de la tabla
 - Texto de estado en botones (`Guardando…`, `Agregando…`) mientras la operacion esta en curso
 - Mensaje diferenciado cuando no hay resultados por filtros activos vs. tabla realmente vacia
 
@@ -311,7 +341,7 @@ Cada pagina con operaciones CRUD muestra errores directamente en la interfaz sin
 ### III. Calidad de codigo
 
 **ESLint configurado sin errores**
-Se configuro ESLint con soporte para TypeScript y Svelte mediante `.eslintrc.json`. Incluye las reglas de `@typescript-eslint/recommended` y `svelte/recommended`. Para verificar:
+Se configuro ESLint con soporte para TypeScript y Svelte mediante `.eslintrc.json`. Para verificar:
 
 ```bash
 docker run --rm bd-quetzal_shop-frontend npm run lint
@@ -320,17 +350,16 @@ docker run --rm bd-quetzal_shop-frontend npm run lint
 Resultado esperado: `0 errors`.
 
 **Pruebas automatizadas con Vitest**
-Se implementaron 10 pruebas en 2 archivos usando Vitest:
+Se implementaron pruebas en 2 archivos usando Vitest:
 
 | Archivo | Tests | Que verifica |
 |---|---|---|
 | `tests/utils.test.ts` | 9 | `formatCurrency`, `stockStatus`, `formatFecha` |
-| `tests/csv.test.ts` | 1 | Escape de valores simples en CSV |
+| `tests/csv.test.ts` | 1 | Escape de valores en exportacion CSV |
 
 Para correr las pruebas:
 
 ```bash
-# Requiere haber hecho docker compose build frontend al menos una vez
 docker run --rm bd-quetzal_shop-frontend npm run test
 ```
 
@@ -340,9 +369,6 @@ Resultado esperado: `10 passed`.
 
 ### IV. Despliegue y entrega
 
-**README con instrucciones funcionales**
-Este README contiene todos los pasos necesarios para levantar el proyecto desde cero: clonar el repositorio, crear el `.env` desde `.env.example` y ejecutar `docker compose up`. Ver seccion "Levantar el proyecto" al inicio.
-
 **El proyecto levanta con un solo comando**
 Los tres servicios (db, backend, frontend) se orquestan con Docker Compose. La base de datos incluye healthcheck para garantizar que el backend no arranque antes de que PostgreSQL este listo. Las credenciales de base de datos son `proy2` / `secret` tal como lo exige la rubrica.
 
@@ -351,10 +377,10 @@ cp .env.example .env
 docker compose up
 ```
 
-| Servicio | URL |
-|---|---|
-| Frontend | http://localhost:5175 |
-| Backend API | http://localhost:8000 |
+| Servicio          | URL                        |
+|-------------------|----------------------------|
+| Frontend          | http://localhost:5173      |
+| Backend API       | http://localhost:8000      |
 | Documentacion API | http://localhost:8000/docs |
 
 ---
@@ -365,7 +391,17 @@ docker compose up
 Se implemento un sistema de autenticacion completo con JWT. El login consume `POST /auth/login`, guarda el token en `localStorage` y lo distribuye a toda la aplicacion mediante el store `auth` en `src/lib/stores/auth.ts`. El logout limpia el store y redirige al login. El estado de sesion es accesible en cualquier componente con `$auth`.
 
 **Exportar reportes a CSV desde la UI**
-Todas las tablas del dashboard incluyen un boton "Exportar CSV" que descarga los datos actualmente visibles (incluyendo filtros aplicados). Implementado en `src/lib/csv.ts` y disponible en: productos, ventas, compras, clientes, proveedores y empleados.
+Todas las tablas del dashboard incluyen un boton "Exportar CSV" que descarga los datos actualmente visibles respetando los filtros aplicados. Implementado en `src/lib/csv.ts` y disponible en: productos, ventas, compras, clientes, proveedores, empleados e historial.
+
+**Modo claro / oscuro**
+La aplicacion soporta modo claro y oscuro con persistencia en `localStorage`. El tema se cambia desde el boton de la barra superior y se aplica globalmente mediante el atributo `data-theme` en el elemento `<html>`. Implementado en `src/lib/stores/theme.ts` usando tokens CSS (variables custom) definidos en `app.css`.
 
 **Diseno responsivo**
-_Pendiente — se implementara en la siguiente rama._
+La interfaz funciona correctamente en pantallas de escritorio, tablet y movil:
+
+- **Navbar**: en pantallas menores a 768px aparece un boton hamburguesa y se oculta el nombre de usuario.
+- **Sidebar**: en movil se convierte en un panel deslizable que se abre al presionar el hamburguesa, con overlay semitransparente y cierre automatico al navegar.
+- **Grids de estadisticas**: pasan de 4 columnas a 2 columnas en tablet/movil.
+- **Formularios modales**: la cuadricula de 2 columnas colapsa a 1 columna en pantallas pequeñas.
+- **Tablas**: scroll horizontal para no romper el layout en pantallas angostas.
+- **Barras de filtros**: los controles se apilan verticalmente con `flex-wrap`.
