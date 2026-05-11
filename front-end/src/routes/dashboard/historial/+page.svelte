@@ -158,22 +158,3 @@
 
 {/if}
 
-<style>
-  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-  .page-title  { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .tab-label   { font-size:14px; font-weight:600; color:#7C3AED; }
-  .tab-toggle  { display:flex; background:#F3F4F6; border-radius:8px; padding:3px; gap:2px; }
-  .tab-btn     { display:flex; align-items:center; gap:6px; padding:6px 16px; border:none; border-radius:6px; font-size:13px; font-weight:500; background:transparent; color:#6B7280; cursor:pointer; transition:all .15s; }
-  .tab-btn.active { background:#fff; color:#111827; box-shadow:0 1px 4px rgba(0,0,0,.1); }
-
-  .filtros-bar     { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
-  .filtro-count    { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-id     { font-family:monospace; color:#9CA3AF; font-size:12px; }
-  .cell-main   { font-weight:500; color:#111827; }
-  .cell-sub    { font-size:12px; color:#6B7280; }
-  .cell-mono   { font-family:monospace; font-size:13px; }
-  .cell-total  { font-weight:700; color:#111827; }
-</style>

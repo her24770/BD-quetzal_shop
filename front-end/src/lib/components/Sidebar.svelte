@@ -5,6 +5,7 @@
   import { auth } from '$lib/stores/auth';
 
   export let lowStockCount: number = 0;
+  export let open: boolean = false;
 
   const allNavItems = [
     { label: 'Dashboard',      href: '/dashboard',                   icon: IC.home,     exact: true, roles: [1, 2, 3] },
@@ -21,7 +22,7 @@
   $: navItems = allNavItems.filter(item => item.roles.includes(rolId));
 </script>
 
-<aside class="sidebar">
+<aside class="sidebar" class:open>
   <nav class="sidebar__nav">
     <div class="sidebar__section-label">Menú</div>
 
@@ -110,5 +111,21 @@
     font-weight: 700;
     padding: 1px 6px;
     border-radius: 10px;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 52px;
+      height: calc(100vh - 52px);
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,.3);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
   }
 </style>

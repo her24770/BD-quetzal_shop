@@ -274,29 +274,21 @@
 {/if}
 
 <style>
-  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-  .page-title  { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .tab-label   { font-size:14px; font-weight:600; color:#7C3AED; }
-  .tab-toggle  { display:flex; background:#F3F4F6; border-radius:8px; padding:3px; gap:2px; }
-  .tab-btn     { display:flex; align-items:center; gap:6px; padding:6px 16px; border:none; border-radius:6px; font-size:13px; font-weight:500; background:transparent; color:#6B7280; cursor:pointer; transition:all .15s; }
-  .tab-btn.active { background:#fff; color:#111827; box-shadow:0 1px 4px rgba(0,0,0,.1); }
-
-  .form-card       { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:20px 24px; margin-bottom:20px; }
-  .form-card__title { font-size:15px; font-weight:600; color:#111827; margin:0 0 16px; }
-  .form-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .form-grid       { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
-  .span-2          { grid-column: span 2; }
-  .form-actions    { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .form-card        { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 24px; margin-bottom:20px; }
+  .form-card__title { font-size:15px; font-weight:600; color:var(--txt); margin:0 0 16px; }
 
   .items-section { margin-top:18px; }
-  .items-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-  .items-title   { font-size:13px; font-weight:600; color:#374151; }
+  .items-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .items-title   { font-size:13px; font-weight:600; color:var(--txt-2); }
   .items-grid    { display:grid; gap:8px; align-items:center; margin-bottom:8px; }
   .items-grid--venta  { grid-template-columns: 3fr 1fr 1fr auto; }
   .items-grid--compra { grid-template-columns: 2fr 2fr 1fr 1fr auto; }
-  .col-label  { font-size:11px; font-weight:600; color:#9CA3AF; text-transform:uppercase; letter-spacing:.04em; }
-  .stock-disp { font-size:13px; font-weight:600; color:#374151; text-align:center; }
-  .remove-btn { padding:4px 8px !important; color:#9CA3AF; }
+  .col-label  { font-size:11px; font-weight:600; color:var(--txt-4); text-transform:uppercase; letter-spacing:.04em; }
+  .stock-disp { font-size:13px; font-weight:600; color:var(--txt-2); text-align:center; }
+  .remove-btn { padding:4px 8px !important; color:var(--txt-4); }
 
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
+  @media (max-width: 600px) {
+    .items-grid--venta  { grid-template-columns: 1fr 1fr auto; }
+    .items-grid--compra { grid-template-columns: 1fr 1fr auto; }
+  }
 </style>

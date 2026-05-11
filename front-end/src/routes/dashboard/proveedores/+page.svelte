@@ -218,19 +218,3 @@
   </div>
 {/if}
 
-<style>
-  .section-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .page-title      { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .header-actions  { display:flex; align-items:center; gap:8px; }
-  .page-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .form-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .form-grid       { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
-  .form-actions    { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
-  .filtros-bar     { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
-  .filtro-count    { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-  .loading-msg     { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-main       { font-weight:500; color:#111827; }
-  .cell-sub        { font-size:12px; color:#6B7280; }
-  .row-actions     { display:flex; gap:6px; }
-</style>

@@ -216,38 +216,26 @@
 
 <style>
   .page-header { margin-bottom:24px; }
-  .page-title  { font-size:22px; font-weight:700; color:#111827; margin:0 0 2px; }
-  .page-sub    { font-size:13px; color:#9CA3AF; margin:0; }
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
+  .page-title  { font-size:22px; font-weight:700; margin:0 0 2px; }
+  .page-sub    { font-size:13px; color:var(--txt-4); margin:0; }
 
-  /* Stats grid */
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-bottom: 24px;
   }
+  @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
 
-  /* Secciones */
   .section-block { margin-bottom:24px; }
   .section-head  { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-  .section-title { font-size:14px; font-weight:600; color:#374151; margin:0; }
-  .section-hint  { font-size:12px; color:#9CA3AF; margin:-4px 0 10px; }
+  .section-title { font-size:14px; font-weight:600; color:var(--txt-2); margin:0; }
+  .section-hint  { font-size:12px; color:var(--txt-4); margin:-4px 0 10px; }
 
-  /* Badge SQL type */
-  .sql-badge {
-    font-size:10px; font-weight:700;
-    padding:2px 8px; border-radius:10px;
-    background:#EDE9FE; color:#7C3AED;
-  }
-  .sql-badge--red   { background:#FEE2E2; color:#DC2626; }
-  .sql-badge--green { background:#D1FAE5; color:#065F46; }
+  .sql-badge       { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:var(--p-100); color:var(--p-700); }
+  .sql-badge--red  { background:var(--red-bg);   color:var(--red-text); }
+  .sql-badge--green{ background:var(--green-bg); color:var(--green-text); }
 
-  /* Celdas */
-  .rank      { font-size:11px; font-weight:700; color:#7C3AED; background:#EDE9FE; padding:1px 6px; border-radius:6px; }
-  .cell-main { font-weight:500; color:#111827; }
-  .cell-sub  { font-size:12px; color:#6B7280; }
-  .cell-num  { font-weight:600; }
-  .cell-total { font-weight:700; color:#111827; }
-  .cell-id   { font-family:monospace; color:#9CA3AF; font-size:12px; }
+  .rank { font-size:11px; font-weight:700; color:var(--p-600); background:var(--p-100); padding:1px 6px; border-radius:6px; }
 </style>

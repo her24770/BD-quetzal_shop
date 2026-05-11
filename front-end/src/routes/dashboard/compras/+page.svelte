@@ -99,17 +99,3 @@
     </table>
   </div>
 {/if}
-
-<style>
-  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
-  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .page-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-id    { font-family:monospace; color:#9CA3AF; font-size:12px; }
-  .cell-sub   { font-size:12px; color:#6B7280; }
-  .cell-mono  { font-family:monospace; font-size:13px; }
-  .cell-total { font-weight:700; color:#111827; }
-</style>

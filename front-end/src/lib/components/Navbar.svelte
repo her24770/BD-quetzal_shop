@@ -1,9 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { createEventDispatcher } from 'svelte';
   import Icon from './Icon.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { theme, toggleTheme } from '$lib/stores/theme';
+
+  const dispatch = createEventDispatcher();
 
   $: displayName = $auth.user?.nombre_empleado ?? $auth.user?.email ?? 'Usuario';
 
@@ -15,6 +18,9 @@
 
 <header class="navbar">
   <div class="navbar__brand">
+    <button class="navbar__menu" on:click={() => dispatch('toggleSidebar')} aria-label="Menú">
+      <Icon path={IC.menu} size={18} />
+    </button>
     <div class="navbar__logo-icon">
       <Icon path={IC.cart} size={15} strokeWidth={2} />
     </div>
@@ -32,7 +38,7 @@
     </div>
     <button class="navbar__logout" on:click={handleLogout}>
       <Icon path={IC.logout} size={13} />
-      Cerrar sesión
+      <span class="logout-label">Cerrar sesión</span>
     </button>
   </div>
 </header>
@@ -84,6 +90,21 @@
   }
   .navbar__username { font-size: 13px; color: rgba(255,255,255,.8); font-weight: 500; }
 
+  .navbar__menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,.1);
+    color: rgba(255,255,255,.85);
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .navbar__menu:hover { background: rgba(255,255,255,.2); }
+
   .navbar__logout {
     display: flex;
     align-items: center;
@@ -98,4 +119,11 @@
     transition: background .15s, color .15s;
   }
   .navbar__logout:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+  @media (max-width: 768px) {
+    .navbar__menu   { display: flex; }
+    .navbar__username { display: none; }
+    .logout-label   { display: none; }
+    .navbar__logout { padding: 5px 8px; }
+  }
 </style>
