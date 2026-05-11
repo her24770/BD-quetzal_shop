@@ -2,7 +2,7 @@
 
 Proyecto 2 — cc3088 Bases de Datos 1 | UVG Ciclo 1 2026
 
-Sistema de punto de venta (POS) para una tienda, compuesto por una base de datos PostgreSQL, una API REST con FastAPI y una interfaz web con SvelteKit. El stack completo se levanta con un solo comando mediante Docker Compose.
+Sistema de punto de venta para una tienda, compuesto por una base de datos PostgreSQL, una API REST con FastAPI y una interfaz web con SvelteKit. El stack completo se levanta con un solo comando mediante Docker Compose.
 
 ---
 
@@ -111,7 +111,7 @@ docker compose down -v
 | Cajero    | cajero1@quetzalshop.com     | cajero123  |
 | Bodeguero | bodeguero1@quetzalshop.com  | bodega123  |
 
-### Acceso directo a la base de datos (opcional)
+### Acceso directo a la base de datos
 
 | Parametro  | Valor          |
 |------------|----------------|
@@ -175,24 +175,151 @@ quetzal_shop-backend/
 
 ---
 
-## Cobertura de requisitos SQL
+## Aspectos de rubrica
 
-| Requisito                          | Implementacion                                               |
-|------------------------------------|--------------------------------------------------------------|
-| JOINs multi-tabla (3+)             | Ventas, items_venta, clientes, empleados, metodo_pago        |
-| Subquery con IN                    | Productos con stock bajo que han sido vendidos               |
-| Subquery con EXISTS                | Clientes que tienen al menos una venta registrada            |
-| GROUP BY + HAVING + agregacion     | Ventas agrupadas por metodo de pago con totales              |
-| CTE (WITH)                         | Top 5 productos mas vendidos                                 |
-| VIEW                               | `v_ventas_completo` — detalle completo de cada venta         |
-| Transaccion con ROLLBACK           | Registro de venta: inserta encabezado + items atomicamente   |
-
-Todos los resultados se muestran en el Dashboard con etiquetas que identifican el tipo de consulta SQL utilizado.
+> El frontend fue desarrollado con **SvelteKit** en lugar de React, con autorizacion del catedratico. La seccion II documenta el sinonimo de cada concepto de React en Svelte.
 
 ---
 
-## Notas de desarrollo
+### I. Arquitectura y API REST
 
-- La API no usa ORM; todas las consultas son SQL directo con `psycopg2`.
-- El frontend consume la API mediante JWT almacenado en `localStorage`.
-- Los errores de restriccion de clave foranea (FK) se capturan y se retornan como HTTP 409 con mensaje descriptivo.
+**Endpoints REST documentados**
+FastAPI genera documentacion OpenAPI automaticamente en `http://localhost:8000/docs` (Swagger UI) y `http://localhost:8000/redoc`. Todos los endpoints aparecen con sus parametros, esquemas de request/response y codigos de respuesta.
+
+**CRUD completo para al menos 2 entidades**
+Se implemento CRUD completo (GET, POST, PATCH, DELETE) para las siguientes entidades, cada una con su propio router en `back-end/routes/`:
+
+- `Productos` — `/productos`
+- `Clientes` — `/clientes`
+- `Categorias` — `/categorias`
+- `Proveedores` — `/proveedores`
+- `Empleados` — `/empleados`
+- `Ventas` — `/ventas`
+- `Compras` — `/compras`
+
+**Manejo de errores en la API**
+Todos los endpoints retornan codigos HTTP correctos: `200` exito, `201` creacion, `404` recurso no encontrado, `409` conflicto de clave foranea, `422` datos invalidos. Los errores siempre se retornan como JSON con el campo `detail`.
+
+**Endpoint de agregacion de datos**
+El router `/reportes` expone cinco endpoints que agregan datos reales de la base de datos:
+
+- `GET /reportes/stats` — total de ventas del dia, compras del mes, empleados activos y productos con stock bajo
+- `GET /reportes/top-productos` — top 5 productos mas vendidos usando CTE y GROUP BY
+- `GET /reportes/ventas-por-metodo` — ventas agrupadas por metodo de pago con GROUP BY y HAVING
+- `GET /reportes/clientes-activos` — clientes con al menos una venta usando subquery EXISTS
+- `GET /reportes/productos-bajo-vendidos` — productos con stock critico que han sido vendidos usando subquery IN
+
+---
+
+### II. Frontend — SvelteKit (equivalentes a React)
+
+El proyecto usa SvelteKit como framework frontend. A continuacion se documenta el concepto de React que exige la rubrica y su equivalente directo en Svelte.
+
+**Navegacion entre vistas → SvelteKit file-based routing**
+React Router define rutas con `<Route path="...">`. SvelteKit usa el sistema de archivos: cada archivo `+page.svelte` dentro de `src/routes/` es automaticamente una ruta. El proyecto tiene 10 rutas distintas:
+
+| Ruta | Archivo |
+|------|---------|
+| `/` | `src/routes/+page.svelte` (login) |
+| `/dashboard` | `src/routes/dashboard/+page.svelte` |
+| `/dashboard/productos` | `src/routes/dashboard/productos/+page.svelte` |
+| `/dashboard/categorias` | `src/routes/dashboard/categorias/+page.svelte` |
+| `/dashboard/clientes` | `src/routes/dashboard/clientes/+page.svelte` |
+| `/dashboard/proveedores` | `src/routes/dashboard/proveedores/+page.svelte` |
+| `/dashboard/empleados` | `src/routes/dashboard/empleados/+page.svelte` |
+| `/dashboard/ventas` | `src/routes/dashboard/ventas/+page.svelte` |
+| `/dashboard/compras` | `src/routes/dashboard/compras/+page.svelte` |
+| `/dashboard/transacciones` | `src/routes/dashboard/transacciones/+page.svelte` |
+
+La navegacion protegida (redireccion si no hay sesion activa) se maneja en `src/routes/dashboard/+layout.svelte`.
+
+**Estado global con React Context → Svelte writable store**
+React Context requiere `createContext`, un `Provider` y `useContext` en cada componente. En Svelte, un `writable` store exportado desde `src/lib/stores/auth.ts` cumple el mismo rol: cualquier componente que lo importe puede leer el estado global con `$auth`. El store persiste el token JWT en `localStorage` y expone los metodos `login` y `logout`.
+
+**useState + useEffect + useMemo/useCallback → reactividad de Svelte**
+
+| Hook de React | Equivalente en Svelte |
+|---|---|
+| `useState(valor)` | `let variable = valor` — Svelte detecta cambios automaticamente |
+| `useEffect(() => {}, [])` | `onMount(async () => { ... })` — se ejecuta al montar el componente |
+| `useMemo(() => calc, [deps])` | `$: computado = expresion` — se recalcula cuando cambian sus dependencias |
+| `useCallback(fn, [deps])` | Funciones normales en `<script>` — Svelte no requiere memoizacion manual |
+
+Ejemplo real en `productos/+page.svelte`:
+```js
+// useMemo equivalente — se recalcula cuando cambia el store o los datos
+$: productosFiltrados = productos.filter(p => { ... });
+
+// useEffect equivalente
+onMount(async () => {
+  const r = await apiFetch('/productos', token);
+  if (r.ok) productos = await r.json();
+});
+```
+
+**Flujo de estado complejo con useReducer → custom store con acciones**
+`useReducer` centraliza el estado y lo modifica solo mediante `dispatch({ type, payload })`. En Svelte el patron equivalente es un custom store que expone metodos nombrados en lugar de un dispatch generico. Implementado en `src/lib/stores/filtros.ts` para todas las paginas del dashboard:
+
+```js
+// Svelte — equivalente a useReducer
+function createFiltrosProductoStore() {
+  const { subscribe, set, update } = writable({ busqueda: '', categoria_id: '', stock_status: 'todos' });
+  return {
+    subscribe,
+    setBusqueda:    (v)  => update(s => ({ ...s, busqueda: v })),       // accion SET_BUSQUEDA
+    setCategoria:   (id) => update(s => ({ ...s, categoria_id: id })),  // accion SET_CATEGORIA
+    setStockStatus: (v)  => update(s => ({ ...s, stock_status: v })),   // accion SET_STOCK
+    reset:          ()   => set({ busqueda: '', categoria_id: '', stock_status: 'todos' }), // accion RESET
+  };
+}
+```
+
+Este patron se aplica en las paginas de productos, ventas, compras, clientes, categorias, proveedores y empleados.
+
+**Formularios controlados con validacion → bind:value + validacion en submit**
+React usa `value={state}` + `onChange` para formularios controlados. Svelte usa `bind:value` que sincroniza automaticamente el input con la variable. La validacion ocurre en `saveForm()` antes de llamar a la API, mostrando el mensaje de error en pantalla si algun campo requerido esta vacio.
+
+```js
+// Validacion del lado del cliente antes de enviar al backend
+if (!form.nombre || !form.precio || !form.stock) {
+  errorMsg = 'Completa todos los campos obligatorios';
+  return;
+}
+```
+
+**Reporte visible con datos reales → Dashboard**
+El dashboard (`/dashboard`) muestra cinco reportes con datos reales consumidos desde los endpoints de `/reportes`:
+
+1. Tarjetas de estadisticas — ventas del dia, stock bajo, compras del mes, empleados activos
+2. Top 5 productos mas vendidos con unidades e ingresos
+3. Ultimas ventas registradas
+4. Ventas agrupadas por metodo de pago
+5. Productos con stock critico que han sido vendidos
+
+Cada reporte indica la tecnica SQL que lo produce (CTE, GROUP BY, EXISTS, IN, VIEW).
+
+**Manejo visible de errores → mensajes en pantalla**
+Cada pagina con operaciones CRUD muestra errores directamente en la interfaz sin recargar la pagina:
+
+- `form-error` — error de validacion o respuesta fallida del servidor, aparece dentro del formulario
+- `page-error` — error al cargar datos, aparece antes de la tabla
+- Texto de estado en botones (`Guardando…`, `Agregando…`) mientras la operacion esta en curso
+- Mensaje diferenciado cuando no hay resultados por filtros activos vs. tabla realmente vacia
+
+---
+
+### III. Calidad de codigo
+
+_Pendiente_
+
+---
+
+### IV. Despliegue y entrega
+
+_Ver seccion "Levantar el proyecto" al inicio de este README._
+
+---
+
+### V. Avanzado
+
+_Ver seccion "Roles y permisos" y funcionalidad de exportar CSV disponible en cada tabla._
