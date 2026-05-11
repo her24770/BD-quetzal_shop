@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { filtrosProducto } from '$lib/stores/filtros';
@@ -23,8 +24,9 @@
   let categorias: Categoria[] = [];
   let loading = true;
   let errorMsg = '';
+  let pageError = '';
   let saving = false;
-  let formEl: HTMLElement;
+  let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
@@ -37,7 +39,6 @@
   $: isAdmin = $auth.user?.rol_id === 1;
   $: token   = $auth.token ?? '';
 
-  // Lista filtrada reactiva — se recalcula cada vez que cambia el store o los datos
   $: productosFiltrados = productos.filter(p => {
     const st = stockStatus(p);
     const matchBusqueda   = !$filtrosProducto.busqueda     || p.nombre.toLowerCase().includes($filtrosProducto.busqueda.toLowerCase());
@@ -66,6 +67,14 @@
     if (r.ok) productos = await r.json();
   }
 
+  function openAdd() {
+    form = emptyForm();
+    if (categorias.length) form.categoria_id = String(categorias[0].id);
+    mode = 'add';
+    errorMsg = '';
+    modalOpen = true;
+  }
+
   function startEdit(p: Producto) {
     form = {
       id:           p.id,
@@ -78,10 +87,11 @@
     };
     mode = 'edit';
     errorMsg = '';
-    setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    modalOpen = true;
   }
 
-  function cancelForm() {
+  function closeModal() {
+    modalOpen = false;
     form = emptyForm();
     if (categorias.length) form.categoria_id = String(categorias[0].id);
     mode = 'add';
@@ -112,7 +122,7 @@
         errorMsg = e.detail ?? 'Error al guardar';
       } else {
         await reloadProductos();
-        cancelForm();
+        closeModal();
       }
     } finally {
       saving = false;
@@ -120,15 +130,13 @@
   }
 
   async function deleteProducto(id: number) {
-    errorMsg = '';
+    pageError = '';
     const res = await apiFetch(`/productos/${id}`, token, { method: 'DELETE' });
     if (res.ok) {
       productos = productos.filter(p => p.id !== id);
-      if (form.id === id) cancelForm();
     } else {
       const e = await res.json().catch(() => ({}));
-      errorMsg = e.detail ?? 'Error al eliminar';
-      setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+      pageError = e.detail ?? 'Error al eliminar';
     }
   }
 
@@ -147,88 +155,92 @@
     );
   }
 
-  function onBusqueda(e: Event)     { filtrosProducto.setBusqueda((e.target as HTMLInputElement).value); }
-  function onCategoria(e: Event)    { filtrosProducto.setCategoria((e.target as HTMLSelectElement).value); }
-  function onStockStatus(e: Event)  { filtrosProducto.setStockStatus((e.target as HTMLSelectElement).value as any); }
+  function onBusqueda(e: Event)    { filtrosProducto.setBusqueda((e.target as HTMLInputElement).value); }
+  function onCategoria(e: Event)   { filtrosProducto.setCategoria((e.target as HTMLSelectElement).value); }
+  function onStockStatus(e: Event) { filtrosProducto.setStockStatus((e.target as HTMLSelectElement).value as any); }
 </script>
 
 <svelte:head><title>Productos — QuetzalShop</title></svelte:head>
 
-<!-- Formulario (solo admin) -->
-{#if isAdmin}
-  <div class="form-card" bind:this={formEl}>
-    <div class="form-card__header">
-      <h3 class="form-card__title">
-        {mode === 'add' ? 'Nuevo producto' : 'Editar producto'}
-      </h3>
+<!-- Modal formulario -->
+<Modal open={modalOpen} title={mode === 'add' ? 'Nuevo producto' : 'Editar producto'} on:close={closeModal}>
+  {#if errorMsg}
+    <div class="form-error">{errorMsg}</div>
+  {/if}
+
+  <div class="form-grid">
+    <div class="qz-field">
+      <label class="qz-label" for="p-nombre">Nombre *</label>
+      <input id="p-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del producto" />
     </div>
 
-    {#if errorMsg}
-      <div class="form-error">{errorMsg}</div>
-    {/if}
-
-    <div class="form-grid">
-      <div class="qz-field">
-        <label class="qz-label" for="p-nombre">Nombre *</label>
-        <input id="p-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del producto" />
-      </div>
-
-      <div class="qz-field">
-        <label class="qz-label" for="p-cat">Categoría *</label>
-        <select id="p-cat" class="qz-input" bind:value={form.categoria_id}>
-          {#each categorias as c}
-            <option value={String(c.id)}>{c.nombre}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="qz-field span-2">
-        <label class="qz-label" for="p-desc">Descripción</label>
-        <textarea id="p-desc" class="qz-input" bind:value={form.descripcion}
-          rows={2} placeholder="Breve descripción…" style="resize:vertical"></textarea>
-      </div>
-
-      <div class="qz-field">
-        <label class="qz-label" for="p-precio">Precio (Q) *</label>
-        <input id="p-precio" type="number" min="0" step="0.01" class="qz-input" bind:value={form.precio} />
-      </div>
-
-      <div class="qz-field">
-        <label class="qz-label" for="p-stock">Stock actual *</label>
-        <input id="p-stock" type="number" min="0" class="qz-input" bind:value={form.stock} />
-      </div>
-
-      <div class="qz-field">
-        <label class="qz-label" for="p-stock-min">Stock mínimo *</label>
-        <input id="p-stock-min" type="number" min="0" class="qz-input" bind:value={form.stock_minimo} />
-      </div>
+    <div class="qz-field">
+      <label class="qz-label" for="p-cat">Categoría *</label>
+      <select id="p-cat" class="qz-input" bind:value={form.categoria_id}>
+        {#each categorias as c}
+          <option value={String(c.id)}>{c.nombre}</option>
+        {/each}
+      </select>
     </div>
 
-    <div class="form-actions">
-      {#if mode === 'edit'}
-        <button class="btn btn-md btn-ghost" on:click={cancelForm}>Cancelar</button>
-        <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.check} size={13} />
-          {saving ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-      {:else}
-        <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.plus} size={13} />
-          {saving ? 'Agregando…' : 'Agregar producto'}
-        </button>
-      {/if}
+    <div class="qz-field span-2">
+      <label class="qz-label" for="p-desc">Descripción</label>
+      <textarea id="p-desc" class="qz-input" bind:value={form.descripcion}
+        rows={2} placeholder="Breve descripción…" style="resize:vertical"></textarea>
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="p-precio">Precio (Q) *</label>
+      <input id="p-precio" type="number" min="0" step="0.01" class="qz-input" bind:value={form.precio} />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="p-stock">Stock actual *</label>
+      <input id="p-stock" type="number" min="0" class="qz-input" bind:value={form.stock} />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="p-stock-min">Stock mínimo *</label>
+      <input id="p-stock-min" type="number" min="0" class="qz-input" bind:value={form.stock_minimo} />
     </div>
   </div>
-{/if}
 
-<!-- Encabezado + filtros -->
+  <div class="form-actions">
+    <button class="btn btn-md btn-ghost" on:click={closeModal}>Cancelar</button>
+    {#if mode === 'edit'}
+      <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.check} size={13} />
+        {saving ? 'Guardando…' : 'Guardar cambios'}
+      </button>
+    {:else}
+      <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.plus} size={13} />
+        {saving ? 'Agregando…' : 'Agregar producto'}
+      </button>
+    {/if}
+  </div>
+</Modal>
+
+<!-- Encabezado -->
 <div class="section-header">
   <h2 class="page-title">Productos</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={productosFiltrados.length === 0}>
-    <Icon path={IC.down} size={13} /> Exportar CSV
-  </button>
+  <div class="header-actions">
+    {#if isAdmin}
+      <button class="btn btn-md btn-purple" on:click={openAdd}>
+        <Icon path={IC.plus} size={13} /> Nuevo producto
+      </button>
+    {/if}
+    <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={productosFiltrados.length === 0}>
+      <Icon path={IC.down} size={13} /> Exportar CSV
+    </button>
+  </div>
 </div>
 
+{#if pageError}
+  <div class="page-error">{pageError}</div>
+{/if}
+
+<!-- Filtros -->
 <div class="filtros-bar">
   <input
     class="qz-input filtro-busqueda"
@@ -236,35 +248,21 @@
     value={$filtrosProducto.busqueda}
     on:input={onBusqueda}
   />
-
-  <select
-    class="qz-input filtro-select"
-    value={$filtrosProducto.categoria_id}
-    on:change={onCategoria}
-  >
+  <select class="qz-input filtro-select" value={$filtrosProducto.categoria_id} on:change={onCategoria}>
     <option value="">Todas las categorías</option>
     {#each categorias as c}
       <option value={String(c.id)}>{c.nombre}</option>
     {/each}
   </select>
-
-  <select
-    class="qz-input filtro-select"
-    value={$filtrosProducto.stock_status}
-    on:change={onStockStatus}
-  >
+  <select class="qz-input filtro-select" value={$filtrosProducto.stock_status} on:change={onStockStatus}>
     <option value="todos">Todo el stock</option>
     <option value="ok">Stock OK</option>
     <option value="bajo">Stock bajo</option>
     <option value="agotado">Agotado</option>
   </select>
-
   {#if hayFiltrosActivos}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosProducto.reset()}>
-      Limpiar filtros
-    </button>
+    <button class="btn btn-sm btn-ghost" on:click={() => filtrosProducto.reset()}>Limpiar filtros</button>
   {/if}
-
   <span class="filtro-count">{productosFiltrados.length} de {productos.length}</span>
 </div>
 
@@ -294,7 +292,7 @@
         {:else}
           {#each productosFiltrados as p}
             {@const st = stockStatus(p)}
-            <tr class:row-selected={form.id === p.id && mode === 'edit'}>
+            <tr>
               <td><span class="cell-main">{p.nombre}</span></td>
               <td><span class="cell-sub">{p.descripcion}</span></td>
               <td>{p.categoria}</td>
@@ -328,25 +326,20 @@
 {/if}
 
 <style>
-  .form-card {
-    background: #fff;
-    border: 1px solid #E5E7EB;
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
+  .section-header   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .page-title       { font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
+  .header-actions   { display: flex; align-items: center; gap: 8px; }
+
+  .page-error {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #DC2626;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 14px;
   }
-  .form-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .form-card__title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-  }
+
   .form-error {
     background: #FEF2F2;
     border: 1px solid #FECACA;
@@ -365,25 +358,16 @@
   .form-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid #F3F4F6;
   }
 
-  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .page-title { font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
-
-  /* Barra de filtros */
-  .filtros-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-  }
-  .filtro-busqueda { flex: 1; min-width: 180px; max-width: 260px; }
-  .filtro-select   { min-width: 160px; }
-  .filtro-count    { font-size: 12px; color: #9CA3AF; margin-left: auto; white-space: nowrap; }
+  .filtros-bar      { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filtro-busqueda  { flex: 1; min-width: 180px; max-width: 260px; }
+  .filtro-select    { min-width: 160px; }
+  .filtro-count     { font-size: 12px; color: #9CA3AF; margin-left: auto; white-space: nowrap; }
 
   .loading-msg { color: #9CA3AF; font-size: 14px; padding: 20px 0; }
   .cell-main   { font-weight: 500; color: #111827; }
@@ -391,8 +375,6 @@
   .cell-num    { font-weight: 600; }
   .stock-cell  { display: flex; align-items: center; gap: 8px; }
   .row-actions { display: flex; gap: 6px; }
-
-  .row-selected td { background: #F5F3FF; }
 
   .badge        { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
   .badge-red    { background: #FEE2E2; color: #DC2626; }

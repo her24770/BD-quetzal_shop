@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
@@ -12,8 +13,9 @@
   let proveedores: Proveedor[] = [];
   let loading = true;
   let errorMsg = '';
+  let pageError = '';
   let saving = false;
-  let formEl: HTMLElement;
+  let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
@@ -27,7 +29,7 @@
   onMount(async () => {
     const r = await apiFetch('/proveedores', token);
     if (r.ok) proveedores = await r.json();
-    else errorMsg = 'Error al cargar proveedores';
+    else pageError = 'Error al cargar proveedores';
     loading = false;
   });
 
@@ -36,14 +38,22 @@
     if (r.ok) proveedores = await r.json();
   }
 
+  function openAdd() {
+    form = emptyForm();
+    mode = 'add';
+    errorMsg = '';
+    modalOpen = true;
+  }
+
   function startEdit(p: Proveedor) {
     form = { id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email, direccion: p.direccion };
     mode = 'edit';
     errorMsg = '';
-    setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    modalOpen = true;
   }
 
-  function cancelForm() {
+  function closeModal() {
+    modalOpen = false;
     form = emptyForm();
     mode = 'add';
     errorMsg = '';
@@ -63,7 +73,7 @@
         errorMsg = e.detail ?? 'Error al guardar';
       } else {
         await reload();
-        cancelForm();
+        closeModal();
       }
     } finally {
       saving = false;
@@ -86,71 +96,74 @@
   }
 
   async function deleteItem(id: number) {
-    errorMsg = '';
+    pageError = '';
     const res = await apiFetch(`/proveedores/${id}`, token, { method: 'DELETE' });
     if (res.ok) {
       proveedores = proveedores.filter(p => p.id !== id);
-      if (form.id === id) cancelForm();
     } else {
       const e = await res.json().catch(() => ({}));
-      errorMsg = e.detail ?? 'Error al eliminar';
-      setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+      pageError = e.detail ?? 'Error al eliminar';
     }
   }
 </script>
 
 <svelte:head><title>Proveedores — QuetzalShop</title></svelte:head>
 
-{#if isAdmin}
-  <div class="form-card" bind:this={formEl}>
-    <div class="form-card__header">
-      <h3 class="form-card__title">{mode === 'add' ? 'Nuevo proveedor' : 'Editar proveedor'}</h3>
+<Modal open={modalOpen} title={mode === 'add' ? 'Nuevo proveedor' : 'Editar proveedor'} on:close={closeModal}>
+  {#if errorMsg}
+    <div class="form-error">{errorMsg}</div>
+  {/if}
+
+  <div class="form-grid">
+    <div class="qz-field">
+      <label class="qz-label" for="pv-nombre">Nombre *</label>
+      <input id="pv-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del proveedor" />
     </div>
-
-    {#if errorMsg}
-      <div class="form-error">{errorMsg}</div>
-    {/if}
-
-    <div class="form-grid">
-      <div class="qz-field">
-        <label class="qz-label" for="p-nombre">Nombre *</label>
-        <input id="p-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del proveedor" />
-      </div>
-      <div class="qz-field">
-        <label class="qz-label" for="p-tel">Teléfono *</label>
-        <input id="p-tel" class="qz-input" bind:value={form.telefono} placeholder="5555-1234" />
-      </div>
-      <div class="qz-field">
-        <label class="qz-label" for="p-email">Email *</label>
-        <input id="p-email" type="email" class="qz-input" bind:value={form.email} placeholder="contacto@proveedor.com" />
-      </div>
-      <div class="qz-field">
-        <label class="qz-label" for="p-dir">Dirección</label>
-        <input id="p-dir" class="qz-input" bind:value={form.direccion} placeholder="Dirección" />
-      </div>
+    <div class="qz-field">
+      <label class="qz-label" for="pv-tel">Teléfono *</label>
+      <input id="pv-tel" class="qz-input" bind:value={form.telefono} placeholder="5555-1234" />
     </div>
-
-    <div class="form-actions">
-      {#if mode === 'edit'}
-        <button class="btn btn-md btn-ghost" on:click={cancelForm}>Cancelar</button>
-        <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.check} size={13} /> {saving ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-      {:else}
-        <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.plus} size={13} /> {saving ? 'Agregando…' : 'Agregar proveedor'}
-        </button>
-      {/if}
+    <div class="qz-field">
+      <label class="qz-label" for="pv-email">Email *</label>
+      <input id="pv-email" type="email" class="qz-input" bind:value={form.email} placeholder="contacto@proveedor.com" />
+    </div>
+    <div class="qz-field">
+      <label class="qz-label" for="pv-dir">Dirección</label>
+      <input id="pv-dir" class="qz-input" bind:value={form.direccion} placeholder="Dirección" />
     </div>
   </div>
-{/if}
+
+  <div class="form-actions">
+    <button class="btn btn-md btn-ghost" on:click={closeModal}>Cancelar</button>
+    {#if mode === 'edit'}
+      <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.check} size={13} /> {saving ? 'Guardando…' : 'Guardar cambios'}
+      </button>
+    {:else}
+      <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.plus} size={13} /> {saving ? 'Agregando…' : 'Agregar proveedor'}
+      </button>
+    {/if}
+  </div>
+</Modal>
 
 <div class="section-header">
   <h2 class="page-title">Proveedores</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={proveedoresFiltrados.length === 0}>
-    <Icon path={IC.down} size={13} /> Exportar CSV
-  </button>
+  <div class="header-actions">
+    {#if isAdmin}
+      <button class="btn btn-md btn-purple" on:click={openAdd}>
+        <Icon path={IC.plus} size={13} /> Nuevo proveedor
+      </button>
+    {/if}
+    <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={proveedoresFiltrados.length === 0}>
+      <Icon path={IC.down} size={13} /> Exportar CSV
+    </button>
+  </div>
 </div>
+
+{#if pageError}
+  <div class="page-error">{pageError}</div>
+{/if}
 
 <div class="filtros-bar">
   <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre o email…"
@@ -180,7 +193,7 @@
           <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}</td></tr>
         {:else}
           {#each proveedoresFiltrados as p}
-            <tr class:row-selected={form.id === p.id && mode === 'edit'}>
+            <tr>
               <td><span class="cell-main">{p.nombre}</span></td>
               <td>{p.telefono}</td>
               <td><span class="cell-sub">{p.email}</span></td>
@@ -206,20 +219,18 @@
 {/if}
 
 <style>
-  .form-card { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:20px 24px; margin-bottom:24px; }
-  .form-card__header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .form-card__title { font-size:15px; font-weight:600; color:#111827; margin:0; }
-  .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
-  .form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
-  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .section-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .page-title      { font-size:20px; font-weight:700; color:#111827; margin:0; }
+  .header-actions  { display:flex; align-items:center; gap:8px; }
+  .page-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-grid       { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .form-actions    { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar     { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
   .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
-  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-main { font-weight:500; color:#111827; }
-  .cell-sub { font-size:12px; color:#6B7280; }
-  .row-actions { display:flex; gap:6px; }
-  .row-selected td { background:#F5F3FF; }
+  .filtro-count    { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
+  .loading-msg     { color:#9CA3AF; font-size:14px; padding:20px 0; }
+  .cell-main       { font-weight:500; color:#111827; }
+  .cell-sub        { font-size:12px; color:#6B7280; }
+  .row-actions     { display:flex; gap:6px; }
 </style>

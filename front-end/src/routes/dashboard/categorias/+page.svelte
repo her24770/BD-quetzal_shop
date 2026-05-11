@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
@@ -11,8 +12,9 @@
   let categorias: Categoria[] = [];
   let loading = true;
   let errorMsg = '';
+  let pageError = '';
   let saving = false;
-  let formEl: HTMLElement;
+  let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
@@ -26,7 +28,7 @@
   onMount(async () => {
     const r = await apiFetch('/categorias', token);
     if (r.ok) categorias = await r.json();
-    else errorMsg = 'Error al cargar categorías';
+    else pageError = 'Error al cargar categorías';
     loading = false;
   });
 
@@ -35,14 +37,22 @@
     if (r.ok) categorias = await r.json();
   }
 
+  function openAdd() {
+    form = emptyForm();
+    mode = 'add';
+    errorMsg = '';
+    modalOpen = true;
+  }
+
   function startEdit(c: Categoria) {
     form = { id: c.id, nombre: c.nombre, descripcion: c.descripcion };
     mode = 'edit';
     errorMsg = '';
-    setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    modalOpen = true;
   }
 
-  function cancelForm() {
+  function closeModal() {
+    modalOpen = false;
     form = emptyForm();
     mode = 'add';
     errorMsg = '';
@@ -62,7 +72,7 @@
         errorMsg = e.detail ?? 'Error al guardar';
       } else {
         await reload();
-        cancelForm();
+        closeModal();
       }
     } finally {
       saving = false;
@@ -78,61 +88,61 @@
   function onBusqueda(e: Event) { filtrosCategorias.set({ busqueda: (e.target as HTMLInputElement).value }); }
 
   async function deleteItem(id: number) {
-    errorMsg = '';
+    pageError = '';
     const res = await apiFetch(`/categorias/${id}`, token, { method: 'DELETE' });
     if (res.ok) {
       categorias = categorias.filter(c => c.id !== id);
-      if (form.id === id) cancelForm();
     } else {
       const e = await res.json().catch(() => ({}));
-      errorMsg = e.detail ?? 'Error al eliminar';
-      setTimeout(() => formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+      pageError = e.detail ?? 'Error al eliminar';
     }
   }
 </script>
 
 <svelte:head><title>Categorías — QuetzalShop</title></svelte:head>
 
-{#if isAdmin}
-  <div class="form-card" bind:this={formEl}>
-    <div class="form-card__header">
-      <h3 class="form-card__title">{mode === 'add' ? 'Nueva categoría' : 'Editar categoría'}</h3>
+<Modal open={modalOpen} title={mode === 'add' ? 'Nueva categoría' : 'Editar categoría'} on:close={closeModal}>
+  {#if errorMsg}
+    <div class="form-error">{errorMsg}</div>
+  {/if}
+
+  <div class="form-grid">
+    <div class="qz-field">
+      <label class="qz-label" for="c-nombre">Nombre *</label>
+      <input id="c-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre de la categoría" />
     </div>
-
-    {#if errorMsg}
-      <div class="form-error">{errorMsg}</div>
-    {/if}
-
-    <div class="form-grid">
-      <div class="qz-field">
-        <label class="qz-label" for="c-nombre">Nombre *</label>
-        <input id="c-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre de la categoría" />
-      </div>
-
-      <div class="qz-field">
-        <label class="qz-label" for="c-desc">Descripción</label>
-        <input id="c-desc" class="qz-input" bind:value={form.descripcion} placeholder="Descripción breve" />
-      </div>
-    </div>
-
-    <div class="form-actions">
-      {#if mode === 'edit'}
-        <button class="btn btn-md btn-ghost" on:click={cancelForm}>Cancelar</button>
-        <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.check} size={13} /> {saving ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-      {:else}
-        <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
-          <Icon path={IC.plus} size={13} /> {saving ? 'Agregando…' : 'Agregar categoría'}
-        </button>
-      {/if}
+    <div class="qz-field">
+      <label class="qz-label" for="c-desc">Descripción</label>
+      <input id="c-desc" class="qz-input" bind:value={form.descripcion} placeholder="Descripción breve" />
     </div>
   </div>
-{/if}
+
+  <div class="form-actions">
+    <button class="btn btn-md btn-ghost" on:click={closeModal}>Cancelar</button>
+    {#if mode === 'edit'}
+      <button class="btn btn-md btn-blue" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.check} size={13} /> {saving ? 'Guardando…' : 'Guardar cambios'}
+      </button>
+    {:else}
+      <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
+        <Icon path={IC.plus} size={13} /> {saving ? 'Agregando…' : 'Agregar categoría'}
+      </button>
+    {/if}
+  </div>
+</Modal>
 
 <div class="section-header">
   <h2 class="page-title">Categorías</h2>
+  {#if isAdmin}
+    <button class="btn btn-md btn-purple" on:click={openAdd}>
+      <Icon path={IC.plus} size={13} /> Nueva categoría
+    </button>
+  {/if}
 </div>
+
+{#if pageError}
+  <div class="page-error">{pageError}</div>
+{/if}
 
 <div class="filtros-bar">
   <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
@@ -160,7 +170,7 @@
           <tr class="empty-row"><td colspan={isAdmin ? 3 : 2}>{hayFiltros ? 'Sin coincidencias' : 'Sin categorías registradas'}</td></tr>
         {:else}
           {#each categoriasFiltradas as c}
-            <tr class:row-selected={form.id === c.id && mode === 'edit'}>
+            <tr>
               <td><span class="cell-main">{c.nombre}</span></td>
               <td><span class="cell-sub">{c.descripcion}</span></td>
               {#if isAdmin}
@@ -184,20 +194,17 @@
 {/if}
 
 <style>
-  .form-card { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:20px 24px; margin-bottom:24px; }
-  .form-card__header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .form-card__title { font-size:15px; font-weight:600; color:#111827; margin:0; }
-  .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
-  .form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
-  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .section-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .page-title      { font-size:20px; font-weight:700; color:#111827; margin:0; }
+  .page-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-grid       { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .form-actions    { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar     { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
   .filtro-busqueda { flex:1; min-width:180px; max-width:300px; }
-  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-  .section-header { margin-bottom:14px; }
-  .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-main { font-weight:500; color:#111827; }
-  .cell-sub { font-size:12px; color:#6B7280; }
-  .row-actions { display:flex; gap:6px; }
-  .row-selected td { background:#F5F3FF; }
+  .filtro-count    { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
+  .loading-msg     { color:#9CA3AF; font-size:14px; padding:20px 0; }
+  .cell-main       { font-weight:500; color:#111827; }
+  .cell-sub        { font-size:12px; color:#6B7280; }
+  .row-actions     { display:flex; gap:6px; }
 </style>
