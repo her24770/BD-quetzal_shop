@@ -310,16 +310,62 @@ Cada pagina con operaciones CRUD muestra errores directamente en la interfaz sin
 
 ### III. Calidad de codigo
 
-_Pendiente_
+**ESLint configurado sin errores**
+Se configuro ESLint con soporte para TypeScript y Svelte mediante `.eslintrc.json`. Incluye las reglas de `@typescript-eslint/recommended` y `svelte/recommended`. Para verificar:
+
+```bash
+docker run --rm bd-quetzal_shop-frontend npm run lint
+```
+
+Resultado esperado: `0 errors`.
+
+**Pruebas automatizadas con Vitest**
+Se implementaron 10 pruebas en 2 archivos usando Vitest:
+
+| Archivo | Tests | Que verifica |
+|---|---|---|
+| `tests/utils.test.ts` | 9 | `formatCurrency`, `stockStatus`, `formatFecha` |
+| `tests/csv.test.ts` | 1 | Escape de valores simples en CSV |
+
+Para correr las pruebas:
+
+```bash
+# Requiere haber hecho docker compose build frontend al menos una vez
+docker run --rm bd-quetzal_shop-frontend npm run test
+```
+
+Resultado esperado: `10 passed`.
 
 ---
 
 ### IV. Despliegue y entrega
 
-_Ver seccion "Levantar el proyecto" al inicio de este README._
+**README con instrucciones funcionales**
+Este README contiene todos los pasos necesarios para levantar el proyecto desde cero: clonar el repositorio, crear el `.env` desde `.env.example` y ejecutar `docker compose up`. Ver seccion "Levantar el proyecto" al inicio.
+
+**El proyecto levanta con un solo comando**
+Los tres servicios (db, backend, frontend) se orquestan con Docker Compose. La base de datos incluye healthcheck para garantizar que el backend no arranque antes de que PostgreSQL este listo. Las credenciales de base de datos son `proy2` / `secret` tal como lo exige la rubrica.
+
+```bash
+cp .env.example .env
+docker compose up
+```
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:5175 |
+| Backend API | http://localhost:8000 |
+| Documentacion API | http://localhost:8000/docs |
 
 ---
 
 ### V. Avanzado
 
-_Ver seccion "Roles y permisos" y funcionalidad de exportar CSV disponible en cada tabla._
+**Autenticacion con login/logout manejada mediante store global**
+Se implemento un sistema de autenticacion completo con JWT. El login consume `POST /auth/login`, guarda el token en `localStorage` y lo distribuye a toda la aplicacion mediante el store `auth` en `src/lib/stores/auth.ts`. El logout limpia el store y redirige al login. El estado de sesion es accesible en cualquier componente con `$auth`.
+
+**Exportar reportes a CSV desde la UI**
+Todas las tablas del dashboard incluyen un boton "Exportar CSV" que descarga los datos actualmente visibles (incluyendo filtros aplicados). Implementado en `src/lib/csv.ts` y disponible en: productos, ventas, compras, clientes, proveedores y empleados.
+
+**Diseno responsivo**
+_Pendiente — se implementara en la siguiente rama._

@@ -28,7 +28,6 @@
   $: rolId  = $auth.user?.rol_id ?? 0;
   $: token  = $auth.token ?? '';
   $: isAdmin  = rolId === 1;
-  $: isCajero = rolId === 2;
   $: canVerVentas = [1, 2].includes(rolId);
 
   $: user = $auth.user;
