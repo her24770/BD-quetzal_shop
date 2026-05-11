@@ -13,14 +13,12 @@
   }
   interface TopProducto  { nombre: string; categoria: string; total_vendido: number; total_ingresos: number; }
   interface VentaMetodo  { metodo: string; cantidad: number; total: number; }
-  interface ClienteActivo { id: number; nombre: string; nit: string; }
   interface ProductoBajo { nombre: string; stock: number; stock_minimo: number; categoria: string; }
   interface VentaReciente { id: number; fecha: string; total: number; cliente: string; empleado: string; metodo_pago: string; }
 
   let stats: Stats | null = null;
   let topProductos:   TopProducto[]   = [];
   let ventasPorMetodo: VentaMetodo[]  = [];
-  let clientesActivos: ClienteActivo[] = [];
   let productosBajoVendidos: ProductoBajo[] = [];
   let ultimasVentas: VentaReciente[] = [];
   let loading = true;
@@ -45,7 +43,6 @@
     if (canVerVentas) {
       calls.push(
         apiFetch('/reportes/ventas-por-metodo',  token).then(r => r.ok && r.json().then((d: VentaMetodo[]) => ventasPorMetodo = d)),
-        apiFetch('/reportes/clientes-activos',   token).then(r => r.ok && r.json().then((d: ClienteActivo[]) => clientesActivos = d)),
         apiFetch('/ventas',                      token).then(r => r.ok && r.json().then((d: VentaReciente[]) => ultimasVentas = d.slice(0, 5))),
       );
     }
@@ -161,65 +158,29 @@
   </div>
 {/if}
 
-<!-- ── Dos columnas: método de pago + clientes activos ── -->
-{#if canVerVentas}
-  <div class="two-col">
-
-    <!-- Ventas por método de pago (GROUP BY + HAVING) -->
-    <div class="section-block">
-      <div class="section-head">
-        <h3 class="section-title">Ventas por método de pago</h3>
-        <span class="sql-badge">GROUP BY + HAVING</span>
-      </div>
-      <div class="qz-table-wrap">
-        <table class="qz-table">
-          <thead>
-            <tr><th>Método</th><th>Cantidad</th><th>Total</th></tr>
-          </thead>
-          <tbody>
-            {#if ventasPorMetodo.length === 0}
-              <tr class="empty-row"><td colspan="3">Sin datos</td></tr>
-            {:else}
-              {#each ventasPorMetodo as m}
-                <tr>
-                  <td><span class="cell-main">{m.metodo}</span></td>
-                  <td>{m.cantidad}</td>
-                  <td><span class="cell-total">{fmt(m.total)}</span></td>
-                </tr>
-              {/each}
-            {/if}
-          </tbody>
-        </table>
-      </div>
+<!-- ── Ventas por método de pago (GROUP BY + HAVING) ── -->
+{#if canVerVentas && ventasPorMetodo.length > 0}
+  <div class="section-block">
+    <div class="section-head">
+      <h3 class="section-title">Ventas por método de pago</h3>
+      <span class="sql-badge">GROUP BY + HAVING</span>
     </div>
-
-    <!-- Clientes que han comprado (EXISTS) -->
-    <div class="section-block">
-      <div class="section-head">
-        <h3 class="section-title">Clientes con ventas</h3>
-        <span class="sql-badge">Subquery EXISTS</span>
-      </div>
-      <div class="qz-table-wrap">
-        <table class="qz-table">
-          <thead>
-            <tr><th>Cliente</th><th>NIT</th></tr>
-          </thead>
-          <tbody>
-            {#if clientesActivos.length === 0}
-              <tr class="empty-row"><td colspan="2">Sin datos</td></tr>
-            {:else}
-              {#each clientesActivos as c}
-                <tr>
-                  <td><span class="cell-main">{c.nombre}</span></td>
-                  <td><span class="cell-mono">{c.nit}</span></td>
-                </tr>
-              {/each}
-            {/if}
-          </tbody>
-        </table>
-      </div>
+    <div class="qz-table-wrap">
+      <table class="qz-table">
+        <thead>
+          <tr><th>Método</th><th>Cantidad</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {#each ventasPorMetodo as m}
+            <tr>
+              <td><span class="cell-main">{m.metodo}</span></td>
+              <td>{m.cantidad}</td>
+              <td><span class="cell-total">{fmt(m.total)}</span></td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     </div>
-
   </div>
 {/if}
 
@@ -282,20 +243,11 @@
   .sql-badge--red   { background:#FEE2E2; color:#DC2626; }
   .sql-badge--green { background:#D1FAE5; color:#065F46; }
 
-  /* Dos columnas */
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
   /* Celdas */
   .rank      { font-size:11px; font-weight:700; color:#7C3AED; background:#EDE9FE; padding:1px 6px; border-radius:6px; }
   .cell-main { font-weight:500; color:#111827; }
   .cell-sub  { font-size:12px; color:#6B7280; }
   .cell-num  { font-weight:600; }
-  .cell-mono { font-family:monospace; font-size:13px; }
   .cell-total { font-weight:700; color:#111827; }
   .cell-id   { font-family:monospace; color:#9CA3AF; font-size:12px; }
 </style>

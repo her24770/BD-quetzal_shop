@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
@@ -16,6 +17,14 @@
   let empleados: Empleado[] = [];
   let loading = true;
   let errorMsg = '';
+  let pageError = '';
+  let saving = false;
+  let modalOpen = false;
+
+  function emptyForm() {
+    return { nombre: '', email: '', password: '', dpi: '', telefono: '', cargo: '', fecha_contrato: '', rol_id: '2' };
+  }
+  let form = emptyForm();
 
   $: isAdmin = $auth.user?.rol_id === 1;
   $: token   = $auth.token ?? '';
@@ -23,9 +32,57 @@
   onMount(async () => {
     const r = await apiFetch('/empleados', token);
     if (r.ok) empleados = await r.json();
-    else errorMsg = 'Error al cargar empleados';
+    else pageError = 'Error al cargar empleados';
     loading = false;
   });
+
+  async function reload() {
+    const r = await apiFetch('/empleados', token);
+    if (r.ok) empleados = await r.json();
+  }
+
+  function openAdd() {
+    form = emptyForm();
+    errorMsg = '';
+    modalOpen = true;
+  }
+
+  function closeModal() {
+    modalOpen = false;
+    form = emptyForm();
+    errorMsg = '';
+  }
+
+  async function saveForm() {
+    if (!form.nombre || !form.email || !form.password || !form.dpi || !form.telefono || !form.cargo || !form.fecha_contrato) {
+      errorMsg = 'Completa todos los campos obligatorios';
+      return;
+    }
+    saving = true;
+    errorMsg = '';
+    const body = {
+      nombre:         form.nombre,
+      email:          form.email,
+      password:       form.password,
+      dpi:            form.dpi,
+      telefono:       form.telefono,
+      cargo:          form.cargo,
+      fecha_contrato: form.fecha_contrato,
+      rol_id:         parseInt(form.rol_id),
+    };
+    try {
+      const res = await apiFetch('/empleados', token, { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        errorMsg = e.detail ?? 'Error al guardar';
+      } else {
+        await reload();
+        closeModal();
+      }
+    } finally {
+      saving = false;
+    }
+  }
 
   $: empleadosFiltrados = empleados.filter(e => {
     const q   = $filtrosEmpleados.busqueda.toLowerCase();
@@ -36,17 +93,17 @@
   });
   $: hayFiltros = $filtrosEmpleados.busqueda !== '' || $filtrosEmpleados.estado !== 'todos';
 
-  function onBusqueda(e: Event)  { filtrosEmpleados.set({ busqueda: (e.target as HTMLInputElement).value }); }
-  function onEstado(e: Event)    { filtrosEmpleados.set({ estado: (e.target as HTMLSelectElement).value }); }
+  function onBusqueda(e: Event) { filtrosEmpleados.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  function onEstado(e: Event)   { filtrosEmpleados.set({ estado: (e.target as HTMLSelectElement).value }); }
 
   async function deleteItem(id: number) {
-    errorMsg = '';
+    pageError = '';
     const res = await apiFetch(`/empleados/${id}`, token, { method: 'DELETE' });
     if (res.ok) {
       empleados = empleados.filter(e => e.id !== id);
     } else {
       const e = await res.json().catch(() => ({}));
-      errorMsg = e.detail ?? 'Error al eliminar';
+      pageError = e.detail ?? 'Error al eliminar';
     }
   }
 
@@ -57,19 +114,89 @@
   function exportarCSV() {
     exportCsv('empleados.csv',
       ['ID', 'Nombre', 'DPI', 'Cargo', 'Telefono', 'Email', 'Rol', 'Fecha Contrato', 'Estado'],
-      empleados.map(e => [e.id, e.nombre, e.dpi, e.cargo, e.telefono, e.email, e.rol_nombre, e.fecha_contrato, e.estado])
+      empleadosFiltrados.map(e => [e.id, e.nombre, e.dpi, e.cargo, e.telefono, e.email, e.rol_nombre, e.fecha_contrato, e.estado])
     );
   }
 </script>
 
 <svelte:head><title>Empleados — QuetzalShop</title></svelte:head>
 
+<Modal open={modalOpen} title="Nuevo empleado" on:close={closeModal}>
+  {#if errorMsg}
+    <div class="form-error">{errorMsg}</div>
+  {/if}
+
+  <div class="form-grid">
+    <div class="qz-field span-2">
+      <label class="qz-label" for="em-nombre">Nombre completo *</label>
+      <input id="em-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del empleado" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-email">Email *</label>
+      <input id="em-email" type="email" class="qz-input" bind:value={form.email} placeholder="correo@ejemplo.com" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-password">Contraseña *</label>
+      <input id="em-password" type="password" class="qz-input" bind:value={form.password} placeholder="Mínimo 6 caracteres" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-dpi">DPI *</label>
+      <input id="em-dpi" class="qz-input" bind:value={form.dpi} placeholder="1234567890101" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-tel">Teléfono *</label>
+      <input id="em-tel" class="qz-input" bind:value={form.telefono} placeholder="5555-1234" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-cargo">Cargo *</label>
+      <input id="em-cargo" class="qz-input" bind:value={form.cargo} placeholder="Ej: Cajero, Bodeguero" />
+    </div>
+
+    <div class="qz-field">
+      <label class="qz-label" for="em-contrato">Fecha de contrato *</label>
+      <input id="em-contrato" type="date" class="qz-input" bind:value={form.fecha_contrato} />
+    </div>
+
+    <div class="qz-field span-2">
+      <label class="qz-label" for="em-rol">Rol *</label>
+      <select id="em-rol" class="qz-input" bind:value={form.rol_id}>
+        <option value="1">Admin</option>
+        <option value="2">Cajero</option>
+        <option value="3">Bodeguero</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-md btn-ghost" on:click={closeModal}>Cancelar</button>
+    <button class="btn btn-md btn-purple" on:click={saveForm} disabled={saving}>
+      <Icon path={IC.plus} size={13} /> {saving ? 'Registrando…' : 'Registrar empleado'}
+    </button>
+  </div>
+</Modal>
+
 <div class="section-header">
   <h2 class="page-title">Empleados</h2>
-  <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={empleadosFiltrados.length === 0}>
-    <Icon path={IC.down} size={13} /> Exportar CSV
-  </button>
+  <div class="header-actions">
+    {#if isAdmin}
+      <button class="btn btn-md btn-purple" on:click={openAdd}>
+        <Icon path={IC.plus} size={13} /> Nuevo empleado
+      </button>
+    {/if}
+    <button class="btn btn-sm btn-ghost" on:click={exportarCSV} disabled={empleadosFiltrados.length === 0}>
+      <Icon path={IC.down} size={13} /> Exportar CSV
+    </button>
+  </div>
 </div>
+
+{#if pageError}
+  <div class="page-error">{pageError}</div>
+{/if}
 
 <div class="filtros-bar">
   <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
@@ -84,10 +211,6 @@
   {/if}
   <span class="filtro-count">{empleadosFiltrados.length} de {empleados.length}</span>
 </div>
-
-{#if errorMsg}
-  <div class="form-error">{errorMsg}</div>
-{/if}
 
 {#if loading}
   <div class="loading-msg">Cargando empleados…</div>
@@ -141,18 +264,23 @@
 {/if}
 
 <style>
-  .filtros-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .section-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .page-title      { font-size:20px; font-weight:700; color:#111827; margin:0; }
+  .header-actions  { display:flex; align-items:center; gap:8px; }
+  .page-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-error      { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
+  .form-grid       { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .span-2          { grid-column: span 2; }
+  .form-actions    { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid #F3F4F6; }
+  .filtros-bar     { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
   .filtro-busqueda { flex:1; min-width:180px; max-width:260px; }
-  .filtro-select { min-width:160px; }
-  .filtro-count { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
-  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .page-title { font-size:20px; font-weight:700; color:#111827; margin:0; }
-  .form-error { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; font-size:13px; padding:8px 12px; border-radius:6px; margin-bottom:14px; }
-  .loading-msg { color:#9CA3AF; font-size:14px; padding:20px 0; }
-  .cell-main { font-weight:500; color:#111827; }
-  .cell-sub  { font-size:12px; color:#6B7280; }
-  .cell-mono { font-family:monospace; font-size:13px; }
-  .badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
-  .badge-green { background:#D1FAE5; color:#065F46; }
-  .badge-gray  { background:#F3F4F6; color:#6B7280; }
+  .filtro-select   { min-width:160px; }
+  .filtro-count    { font-size:12px; color:#9CA3AF; margin-left:auto; white-space:nowrap; }
+  .loading-msg     { color:#9CA3AF; font-size:14px; padding:20px 0; }
+  .cell-main       { font-weight:500; color:#111827; }
+  .cell-sub        { font-size:12px; color:#6B7280; }
+  .cell-mono       { font-family:monospace; font-size:13px; }
+  .badge           { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
+  .badge-green     { background:#D1FAE5; color:#065F46; }
+  .badge-gray      { background:#F3F4F6; color:#6B7280; }
 </style>

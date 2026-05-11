@@ -13,17 +13,12 @@
     { label: 'Proveedores',    href: '/dashboard/proveedores',       icon: IC.truck,                 roles: [1, 3] },
     { label: 'Clientes',       href: '/dashboard/clientes',          icon: IC.users,                 roles: [1, 2] },
     { label: 'Transacciones',  href: '/dashboard/transacciones',     icon: IC.transfer,              roles: [1, 2, 3] },
+    { label: 'Historial',      href: '/dashboard/historial',         icon: IC.chart,                 roles: [1, 2, 3] },
     { label: 'Empleados',      href: '/dashboard/empleados',         icon: IC.person,                roles: [1] },
   ];
 
-  $: rolId       = $auth.user?.rol_id ?? 0;
-  $: navItems    = allNavItems.filter(item => item.roles.includes(rolId));
-  $: currentPath = $page.url.pathname;
-
-  function isActive(href: string, exact = false): boolean {
-    if (exact) return currentPath === href;
-    return currentPath === href || currentPath.startsWith(href + '/');
-  }
+  $: rolId    = $auth.user?.rol_id ?? 0;
+  $: navItems = allNavItems.filter(item => item.roles.includes(rolId));
 </script>
 
 <aside class="sidebar">
@@ -31,7 +26,9 @@
     <div class="sidebar__section-label">Menú</div>
 
     {#each navItems as item}
-      {@const active = isActive(item.href, item.exact)}
+      {@const active = item.exact
+        ? $page.url.pathname === item.href
+        : $page.url.pathname === item.href || $page.url.pathname.startsWith(item.href + '/')}
       <a href={item.href} class="sidebar__item" class:active>
         {#if active}
           <div class="sidebar__active-bar"></div>

@@ -18,7 +18,6 @@
       <Icon path={IC.cart} size={15} strokeWidth={2} />
     </div>
     <span class="navbar__name">QuetzalShop</span>
-    <span class="navbar__version">POS v2</span>
   </div>
 
   <div class="navbar__end">
@@ -54,7 +53,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   .navbar__name { font-weight: 700; font-size: 16px; letter-spacing: -.3px; }
-  .navbar__version { font-size: 10px; color: rgba(255,255,255,.35); font-weight: 400; margin-left: 2px; }
+
 
   .navbar__end { display: flex; align-items: center; gap: 14px; }
 
