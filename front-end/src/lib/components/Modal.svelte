@@ -42,7 +42,7 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -50,13 +50,14 @@
     padding: 16px;
   }
   .box {
-    background: #fff;
+    background: var(--surface, #fff);
     border-radius: 12px;
     width: 100%;
     max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border, #E5E7EB);
   }
   .header {
     display: flex;
@@ -67,20 +68,20 @@
   .title {
     font-size: 16px;
     font-weight: 600;
-    color: #111827;
+    color: var(--txt, #111827);
     margin: 0;
   }
   .close-btn {
     background: none;
     border: none;
     cursor: pointer;
-    color: #6B7280;
+    color: var(--txt-3, #6B7280);
     padding: 4px;
     border-radius: 6px;
     display: flex;
     align-items: center;
   }
-  .close-btn:hover { color: #111827; background: #F3F4F6; }
+  .close-btn:hover { color: var(--txt, #111827); background: var(--surface-alt, #F3F4F6); }
   .body {
     padding: 16px 24px 24px;
   }

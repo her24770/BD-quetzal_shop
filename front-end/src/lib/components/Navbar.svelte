@@ -3,6 +3,7 @@
   import Icon from './Icon.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
+  import { theme, toggleTheme } from '$lib/stores/theme';
 
   $: displayName = $auth.user?.nombre_empleado ?? $auth.user?.email ?? 'Usuario';
 
@@ -21,6 +22,10 @@
   </div>
 
   <div class="navbar__end">
+    <button class="navbar__theme" on:click={toggleTheme} title="Cambiar tema">
+      <Icon path={$theme === 'light' ? IC.moon : IC.sun} size={15} />
+    </button>
+
     <div class="navbar__user">
       <div class="navbar__avatar">{displayName[0]?.toUpperCase() ?? 'U'}</div>
       <span class="navbar__username">{displayName}</span>
@@ -54,8 +59,21 @@
   }
   .navbar__name { font-weight: 700; font-size: 16px; letter-spacing: -.3px; }
 
+  .navbar__end { display: flex; align-items: center; gap: 10px; }
 
-  .navbar__end { display: flex; align-items: center; gap: 14px; }
+  .navbar__theme {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,.1);
+    color: rgba(255,255,255,.8);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .navbar__theme:hover { background: rgba(255,255,255,.2); color: #fff; }
 
   .navbar__user { display: flex; align-items: center; gap: 8px; }
   .navbar__avatar {
@@ -77,11 +95,7 @@
     color: rgba(255,255,255,.7);
     font-size: 12px;
     cursor: pointer;
-    text-decoration: none;
     transition: background .15s, color .15s;
   }
-  .navbar__logout:hover {
-    background: rgba(255,255,255,.1);
-    color: #fff;
-  }
+  .navbar__logout:hover { background: rgba(255,255,255,.1); color: #fff; }
 </style>

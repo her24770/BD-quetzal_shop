@@ -50,7 +50,7 @@
   .shell__main {
     flex: 1;
     overflow-y: auto;
-    background: #F3F4F6;
+    background: var(--bg);
   }
 
   .shell__content {

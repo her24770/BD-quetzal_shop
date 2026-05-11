@@ -365,8 +365,8 @@
   }
 
   .filtros-bar      { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  .filtro-busqueda  { flex: 1; min-width: 180px; max-width: 260px; }
-  .filtro-select    { min-width: 160px; }
+  .filtro-busqueda  { width: 220px; }
+  .filtro-select    { width: 175px; }
   .filtro-count     { font-size: 12px; color: #9CA3AF; margin-left: auto; white-space: nowrap; }
 
   .loading-msg { color: #9CA3AF; font-size: 14px; padding: 20px 0; }

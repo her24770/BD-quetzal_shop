@@ -24,15 +24,15 @@
 
 <style>
   .stat-card {
-    background: #fff;
+    background: var(--surface);
     border-radius: 12px;
     padding: 18px 20px;
-    border: 1px solid #E5E7EB;
-    transition: transform .2s, box-shadow .2s;
+    border: 1px solid var(--border);
+    transition: transform .2s, box-shadow .2s, background .2s;
   }
   .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,.07);
+    box-shadow: 0 6px 20px rgba(0,0,0,.12);
   }
   .stat-card__top {
     display: flex;
@@ -43,7 +43,7 @@
   .stat-card__label {
     font-size: 11px;
     font-weight: 500;
-    color: #9CA3AF;
+    color: var(--txt-4);
     text-transform: uppercase;
     letter-spacing: .05em;
   }
@@ -56,13 +56,13 @@
   .stat-card__value {
     font-size: 26px;
     font-weight: 700;
-    color: #111827;
+    color: var(--txt);
     letter-spacing: -.5px;
     line-height: 1;
   }
   .stat-card__sub {
     font-size: 11px;
-    color: #9CA3AF;
+    color: var(--txt-4);
     margin-top: 6px;
   }
 </style>
