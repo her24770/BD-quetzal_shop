@@ -209,7 +209,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO qs_admin;
 GRANT SELECT ON productos, categorias, metodos_pago, clientes, ventas, items_venta TO qs_cajero;
 GRANT INSERT, UPDATE ON clientes TO qs_cajero;
 GRANT INSERT ON ventas, items_venta TO qs_cajero;
-GRANT USAGE, SELECT ON SEQUENCE ventas_id_seq, items_venta_venta_id_seq, clientes_id_seq TO qs_cajero;
+-- UPDATE solo en la columna stock: lo necesita sp_registrar_venta para decrementar el inventario
+GRANT UPDATE (stock) ON productos TO qs_cajero;
+GRANT USAGE, SELECT ON SEQUENCE ventas_id_seq, clientes_id_seq TO qs_cajero;
 
 -- qs_bodeguero: inventario y compras
 GRANT SELECT ON categorias TO qs_bodeguero;

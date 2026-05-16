@@ -14,18 +14,6 @@ INSERT INTO roles (nombre, descripcion) VALUES
 ('Auditor',     'Acceso de solo lectura al historial de ventas, compras y reportes.');
 
 -- ============================================================
--- USUARIOS DE PRUEBA — Gerente (rol_id=4) y Auditor (rol_id=5)
--- Passwords: gerente123 y auditor123 (mismo hash bcrypt que los existentes por rol)
--- ============================================================
-INSERT INTO usuarios (email, password_hash, rol_id, creado) VALUES
-('gerente@quetzalshop.com', '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 4, '2025-01-10 08:00:00'),
-('auditor@quetzalshop.com', '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 5, '2025-01-10 08:00:00');
-
-INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato, estado) VALUES
-(26, '6677889900201', 'Ricardo Estrada Molina',   '5555-0026', 'Gerente de Operaciones', '2024-01-10', 'activo'),
-(27, '7788990011302', 'Claudia Barrios Solano',   '5555-0027', 'Auditora Interna',       '2024-01-10', 'activo');
-
--- ============================================================
 -- METODOS_PAGO
 -- ============================================================
 INSERT INTO metodos_pago (metodo) VALUES
@@ -85,11 +73,11 @@ INSERT INTO usuarios (email, password_hash, rol_id, creado) VALUES
 ('cajero1@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-01-10 08:05:00'),
 ('cajero2@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-01-10 08:10:00'),
 ('cajero3@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-02-01 09:00:00'),
-('bodeguero1@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-01-10 08:15:00'),
-('bodeguero2@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-01-10 08:20:00'),
+('bodeguero1@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-01-10 08:15:00'),
+('bodeguero2@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-01-10 08:20:00'),
 ('cajero4@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-03-01 09:00:00'),
 ('cajero5@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-03-15 09:00:00'),
-('bodeguero3@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-04-01 09:00:00'),
+('bodeguero3@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-04-01 09:00:00'),
 ('admin2@quetzalshop.com',      '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 1, '2025-04-15 09:00:00'),
 ('cajero6@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-05-01 09:00:00'),
 ('cajero7@quetzalshop.com',     '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-05-15 09:00:00'),
@@ -99,13 +87,15 @@ INSERT INTO usuarios (email, password_hash, rol_id, creado) VALUES
 ('cajero11@quetzalshop.com',    '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-07-15 09:00:00'),
 ('cajero12@quetzalshop.com',    '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-08-01 09:00:00'),
 ('cajero13@quetzalshop.com',    '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 2, '2025-08-15 09:00:00'),
-('bodeguero4@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-05-01 09:00:00'),
-('bodeguero5@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-05-15 09:00:00'),
-('bodeguero6@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-06-01 09:00:00'),
-('bodeguero7@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-06-15 09:00:00'),
-('bodeguero8@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-07-01 09:00:00'),
-('bodeguero9@quetzalshop.com',  '$2b$12$HbrctOfzXtJXrlIzY0SBveb1rMDCjTZImB0Ms/LaH9Q6UzJMwvKxy', 3, '2025-07-15 09:00:00'),
-('admin3@quetzalshop.com',      '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 1, '2025-08-01 09:00:00');
+('bodeguero4@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-05-01 09:00:00'),
+('bodeguero5@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-05-15 09:00:00'),
+('bodeguero6@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-06-01 09:00:00'),
+('bodeguero7@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-06-15 09:00:00'),
+('bodeguero8@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-07-01 09:00:00'),
+('bodeguero9@quetzalshop.com',  '$2b$12$NwN0CwSxnsjX1VN08x1ZzueLxle7pdzqOqClMqnwOiJQ/PqJoaFSK', 3, '2025-07-15 09:00:00'),
+('admin3@quetzalshop.com',      '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 1, '2025-08-01 09:00:00'),
+('gerente@quetzalshop.com',    '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 4, '2025-01-10 08:00:00'),
+('auditor@quetzalshop.com',    '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 5, '2025-01-10 08:00:00');
 
 -- ============================================================
 -- EMPLEADOS
@@ -135,7 +125,9 @@ INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato,
 (22, '2233445566712', 'Sandra Maricela Cucul Pop','5555-0022', 'Bodeguera',            '2025-06-15', 'activo'),
 (23, '3344556677813', 'Hector Ernesto Coyote Tun','5555-0023', 'Bodeguero',            '2025-07-01', 'activo'),
 (24, '4455667788914', 'Lorena Beatriz Tux Choc',  '5555-0024', 'Bodeguera',            '2025-07-15', 'activo'),
-(25, '5566778899015', 'Miguel Angel Puac Xo',     '5555-0025', 'Administrador',        '2025-08-01', 'activo');
+(25, '5566778899015', 'Miguel Angel Puac Xo',     '5555-0025', 'Administrador',        '2025-08-01', 'activo'),
+(26, '6677889900201', 'Ricardo Estrada Molina',   '5555-0026', 'Gerente de Operaciones','2024-01-10', 'activo'),
+(27, '7788990011302', 'Claudia Barrios Solano',   '5555-0027', 'Auditora Interna',      '2024-01-10', 'activo');
 
 -- ============================================================
 -- PRODUCTOS
