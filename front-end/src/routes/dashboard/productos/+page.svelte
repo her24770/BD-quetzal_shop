@@ -7,7 +7,8 @@
   import { filtrosProducto } from '$lib/stores/filtros';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
-  import { requireRole } from '$lib/guards';
+  import { requirePermiso } from '$lib/guards';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Categoria { id: number; nombre: string; }
   interface Producto {
@@ -37,9 +38,9 @@
     return { id: 0, nombre: '', descripcion: '', precio: '', stock: '', stock_minimo: '', categoria_id: '' };
   }
 
-  $: rolId    = $auth.user?.rol_id ?? 0;
-  $: canEdit  = [1, 3].includes(rolId);
   $: token    = $auth.token ?? '';
+  $: canEdit  = ($permisos['productos'] ?? []).includes('INSERT');
+  $: canDelete = ($permisos['productos'] ?? []).includes('DELETE');
 
   $: productosFiltrados = productos.filter(p => {
     const st = stockStatus(p);
@@ -54,7 +55,7 @@
                          $filtrosProducto.stock_status !== 'todos';
 
   onMount(async () => {
-    if (!requireRole([1, 3, 4])) return;
+    if (!requirePermiso('productos')) return;
     const [r1, r2] = await Promise.all([
       apiFetch('/productos',  token),
       apiFetch('/categorias', token),
@@ -282,13 +283,13 @@
           <th>Categoría</th>
           <th>Precio</th>
           <th>Stock</th>
-          {#if canEdit}<th>Acciones</th>{/if}
+          {#if canEdit || canDelete}<th>Acciones</th>{/if}
         </tr>
       </thead>
       <tbody>
         {#if productosFiltrados.length === 0}
           <tr class="empty-row">
-            <td colspan={canEdit ? 6 : 5}>
+            <td colspan={(canEdit || canDelete) ? 6 : 5}>
               {hayFiltrosActivos ? 'Sin productos que coincidan con los filtros' : 'Sin productos registrados'}
             </td>
           </tr>
@@ -308,15 +309,19 @@
                   {/if}
                 </div>
               </td>
-              {#if canEdit}
+              {#if canEdit || canDelete}
                 <td>
                   <div class="row-actions">
-                    <button class="btn btn-sm btn-blue" on:click={() => startEdit(p)}>
-                      <Icon path={IC.edit} size={11} /> Editar
-                    </button>
-                    <button class="btn btn-sm btn-danger" on:click={() => deleteProducto(p.id)}>
-                      <Icon path={IC.trash} size={11} /> Eliminar
-                    </button>
+                    {#if canEdit}
+                      <button class="btn btn-sm btn-blue" on:click={() => startEdit(p)}>
+                        <Icon path={IC.edit} size={11} /> Editar
+                      </button>
+                    {/if}
+                    {#if canDelete}
+                      <button class="btn btn-sm btn-danger" on:click={() => deleteProducto(p.id)}>
+                        <Icon path={IC.trash} size={11} /> Eliminar
+                      </button>
+                    {/if}
                   </div>
                 </td>
               {/if}

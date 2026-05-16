@@ -2,7 +2,8 @@
   import { goto } from '$app/navigation';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { loginRequest } from '$lib/api';
+  import { loginRequest, apiFetch } from '$lib/api';
+  import { permisos } from '$lib/stores/permisos';
 
   let email        = '';
   let password     = '';
@@ -22,6 +23,8 @@
     try {
       const data = await loginRequest(email, password);
       auth.login(data.access_token, data.user);
+      const r = await apiFetch('/auth/me/permisos', data.access_token);
+      if (r.ok) permisos.load(await r.json());
       goto('/dashboard');
     } catch (e: any) {
       error = e.message ?? 'Error al iniciar sesión';

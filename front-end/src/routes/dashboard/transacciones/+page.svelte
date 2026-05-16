@@ -4,7 +4,8 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
-  import { requireRole } from '$lib/guards';
+  import { requirePermisoAny } from '$lib/guards';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Producto   { id: number; nombre: string; stock: number; precio: number; }
   interface Cliente    { id: number; nombre: string; nit: string; }
@@ -17,10 +18,9 @@
   let metodos:     MetodoPago[] = [];
   let loading = true;
 
-  $: rolId      = $auth.user?.rol_id ?? 0;
-  $: canVentas  = [1, 2].includes(rolId);
-  $: canCompras = [1, 3].includes(rolId);
   $: token      = $auth.token ?? '';
+  $: canVentas  = ($permisos['ventas']  ?? []).includes('INSERT');
+  $: canCompras = ($permisos['compras'] ?? []).includes('INSERT');
 
   let activeTab: 'ventas' | 'compras' = 'ventas';
   $: if (!canVentas && canCompras) activeTab = 'compras';
@@ -108,7 +108,7 @@
   }
 
   onMount(async () => {
-    if (!requireRole([1, 2, 3])) return;
+    if (!requirePermisoAny([['ventas', 'INSERT'], ['compras', 'INSERT']])) return;
     const calls: Promise<any>[] = [reloadProductos()];
     if (canVentas) {
       calls.push(

@@ -39,6 +39,7 @@ function createAuthStore() {
     // Limpia el estado al hacer logout
     logout() {
       localStorage.removeItem('auth');
+      localStorage.removeItem('permisos');
       set({ token: null, user: null });
     }
   };

@@ -5,9 +5,10 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
-  import { requireRole } from '$lib/guards';
+  import { requirePermiso } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosClientes } from '$lib/stores/filtros';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Cliente { id: number; nombre: string; nit: string; telefono: string; direccion: string; }
 
@@ -24,12 +25,11 @@
 
   function emptyForm() { return { id: 0, nombre: '', nit: '', telefono: '', direccion: '' }; }
 
-  $: rolId    = $auth.user?.rol_id ?? 0;
-  $: canEdit  = [1, 2].includes(rolId);
   $: token    = $auth.token ?? '';
+  $: canEdit  = ($permisos['clientes'] ?? []).includes('INSERT');
 
   onMount(async () => {
-    if (!requireRole([1, 2, 4])) return;
+    if (!requirePermiso('clientes')) return;
     const r = await apiFetch('/clientes', token);
     if (r.ok) clientes = await r.json();
     else pageError = 'Error al cargar clientes';

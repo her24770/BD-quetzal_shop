@@ -4,6 +4,7 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
+  import { permisos } from '$lib/stores/permisos';
   import { exportCsv } from '$lib/csv';
 
   interface VentaResumen  { id: number; fecha: string; total: number; descuento: number; cliente: string; nit: string; empleado: string; metodo_pago: string; }
@@ -13,10 +14,9 @@
   let compras: CompraResumen[] = [];
   let loading = true;
 
-  $: rolId      = $auth.user?.rol_id ?? 0;
-  $: canVentas  = [1, 2, 4, 5].includes(rolId);
-  $: canCompras = [1, 3, 4, 5].includes(rolId);
   $: token      = $auth.token ?? '';
+  $: canVentas  = ($permisos['ventas']  ?? []).includes('SELECT');
+  $: canCompras = ($permisos['compras'] ?? []).includes('SELECT');
 
   let activeTab: 'ventas' | 'compras' = 'ventas';
   $: if (!canVentas && canCompras) activeTab = 'compras';

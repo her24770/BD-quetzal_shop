@@ -2,24 +2,27 @@
   import { page } from '$app/stores';
   import Icon from './Icon.svelte';
   import { IC } from '$lib/icons';
-  import { auth } from '$lib/stores/auth';
+  import { permisos } from '$lib/stores/permisos';
 
   export let lowStockCount: number = 0;
   export let open: boolean = false;
 
+  // check: null = siempre visible | array de [tabla, op] = OR entre ellos
   const allNavItems = [
-    { label: 'Dashboard',      href: '/dashboard',                   icon: IC.home,     exact: true, roles: [1, 2, 3, 4, 5] },
-    { label: 'Productos',      href: '/dashboard/productos',         icon: IC.box,      badge: true, roles: [1, 3, 4] },
-    { label: 'Categorías',     href: '/dashboard/categorias',        icon: IC.tag,                   roles: [1, 3, 4] },
-    { label: 'Proveedores',    href: '/dashboard/proveedores',       icon: IC.truck,                 roles: [1, 3, 4] },
-    { label: 'Clientes',       href: '/dashboard/clientes',          icon: IC.users,                 roles: [1, 2, 4] },
-    { label: 'Transacciones',  href: '/dashboard/transacciones',     icon: IC.transfer,              roles: [1, 2, 3] },
-    { label: 'Historial',      href: '/dashboard/historial',         icon: IC.chart,                 roles: [1, 2, 3, 4, 5] },
-    { label: 'Empleados',      href: '/dashboard/empleados',         icon: IC.person,                roles: [1, 4] },
+    { label: 'Dashboard',     href: '/dashboard',               icon: IC.home,     exact: true, check: null },
+    { label: 'Productos',     href: '/dashboard/productos',     icon: IC.box,      badge: true, check: [['productos',   'SELECT']] },
+    { label: 'Categorías',    href: '/dashboard/categorias',    icon: IC.tag,                   check: [['categorias',  'SELECT']] },
+    { label: 'Proveedores',   href: '/dashboard/proveedores',   icon: IC.truck,                 check: [['proveedores', 'SELECT']] },
+    { label: 'Clientes',      href: '/dashboard/clientes',      icon: IC.users,                 check: [['clientes',    'SELECT']] },
+    { label: 'Transacciones', href: '/dashboard/transacciones', icon: IC.transfer,              check: [['ventas', 'INSERT'], ['compras', 'INSERT']] },
+    { label: 'Historial',     href: '/dashboard/historial',     icon: IC.chart,                 check: [['ventas', 'SELECT'], ['compras', 'SELECT']] },
+    { label: 'Empleados',     href: '/dashboard/empleados',     icon: IC.person,                check: [['empleados',   'SELECT']] },
   ];
 
-  $: rolId    = $auth.user?.rol_id ?? 0;
-  $: navItems = allNavItems.filter(item => item.roles.includes(rolId));
+  $: navItems = allNavItems.filter(item => {
+    if (!item.check) return true;
+    return item.check.some(([tabla, op]) => ($permisos[tabla] ?? []).includes(op));
+  });
 </script>
 
 <aside class="sidebar" class:open>

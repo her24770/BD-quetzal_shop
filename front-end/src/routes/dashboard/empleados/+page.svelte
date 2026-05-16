@@ -5,9 +5,10 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
-  import { requireRole } from '$lib/guards';
+  import { requirePermiso } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosEmpleados } from '$lib/stores/filtros';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Empleado {
     id: number; usuario_id: number; dpi: string; nombre: string;
@@ -27,12 +28,11 @@
   }
   let form = emptyForm();
 
-  $: rolId   = $auth.user?.rol_id ?? 0;
-  $: isAdmin = rolId === 1;
   $: token   = $auth.token ?? '';
+  $: isAdmin = ($permisos['empleados'] ?? []).includes('INSERT');
 
   onMount(async () => {
-    if (!requireRole([1, 4])) return;
+    if (!requirePermiso('empleados')) return;
     const r = await apiFetch('/empleados', token);
     if (r.ok) empleados = await r.json();
     else pageError = 'Error al cargar empleados';

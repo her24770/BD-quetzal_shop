@@ -7,7 +7,8 @@
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
   import { filtrosProveedores } from '$lib/stores/filtros';
-  import { requireRole } from '$lib/guards';
+  import { requirePermiso } from '$lib/guards';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Proveedor { id: number; nombre: string; telefono: string; email: string; direccion: string; }
 
@@ -24,12 +25,11 @@
 
   function emptyForm() { return { id: 0, nombre: '', telefono: '', email: '', direccion: '' }; }
 
-  $: rolId    = $auth.user?.rol_id ?? 0;
-  $: canEdit  = [1, 3].includes(rolId);
   $: token    = $auth.token ?? '';
+  $: canEdit  = ($permisos['proveedores'] ?? []).includes('INSERT');
 
   onMount(async () => {
-    if (!requireRole([1, 3, 4])) return;
+    if (!requirePermiso('proveedores')) return;
     const r = await apiFetch('/proveedores', token);
     if (r.ok) proveedores = await r.json();
     else pageError = 'Error al cargar proveedores';

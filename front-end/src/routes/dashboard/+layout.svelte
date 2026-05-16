@@ -1,10 +1,13 @@
 <script lang="ts">
   import { goto, afterNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import Navbar from '$lib/components/Navbar.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Toast from '$lib/components/Toast.svelte';
   import { auth } from '$lib/stores/auth';
+  import { apiFetch } from '$lib/api';
+  import { permisos } from '$lib/stores/permisos';
 
   let toasts: { id: number; msg: string; type: 'success' | 'error' }[] = [];
   let sidebarOpen = false;
@@ -14,9 +17,15 @@
 
   afterNavigate(() => { sidebarOpen = false; });
 
-  onMount(() => {
+  onMount(async () => {
     if (!$auth.token) {
       goto('/');
+      return;
+    }
+    // Si el store de permisos está vacío (refresh de página), los recarga del API
+    if (Object.keys(get(permisos)).length === 0) {
+      const r = await apiFetch('/auth/me/permisos', $auth.token);
+      if (r.ok) permisos.load(await r.json());
     }
   });
 </script>

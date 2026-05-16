@@ -6,7 +6,8 @@
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { filtrosCategorias } from '$lib/stores/filtros';
-  import { requireRole } from '$lib/guards';
+  import { requirePermiso } from '$lib/guards';
+  import { permisos } from '$lib/stores/permisos';
 
   interface Categoria { id: number; nombre: string; descripcion: string; }
 
@@ -23,12 +24,11 @@
 
   function emptyForm() { return { id: 0, nombre: '', descripcion: '' }; }
 
-  $: rolId   = $auth.user?.rol_id ?? 0;
-  $: isAdmin = rolId === 1;
   $: token   = $auth.token ?? '';
+  $: isAdmin = ($permisos['categorias'] ?? []).includes('INSERT');
 
   onMount(async () => {
-    if (!requireRole([1, 3, 4])) return;
+    if (!requirePermiso('categorias')) return;
     const r = await apiFetch('/categorias', token);
     if (r.ok) categorias = await r.json();
     else pageError = 'Error al cargar categorías';
