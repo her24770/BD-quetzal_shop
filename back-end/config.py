@@ -27,6 +27,13 @@ class Settings:
         "CORS_ORIGINS", "http://localhost:5173,http://localhost:3000"
     ).split(",")
 
+    # Credenciales de los 5 roles de PostgreSQL (las usa el API en runtime)
+    DB_ADMIN_PASSWORD: str     = os.getenv("DB_ADMIN_PASSWORD",     "admin_secret")
+    DB_CAJERO_PASSWORD: str    = os.getenv("DB_CAJERO_PASSWORD",    "cajero_secret")
+    DB_BODEGUERO_PASSWORD: str = os.getenv("DB_BODEGUERO_PASSWORD", "bodeguero_secret")
+    DB_GERENTE_PASSWORD: str   = os.getenv("DB_GERENTE_PASSWORD",   "gerente_secret")
+    DB_AUDITOR_PASSWORD: str   = os.getenv("DB_AUDITOR_PASSWORD",   "auditor_secret")
+
     # Construct database URL for connection string
     DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

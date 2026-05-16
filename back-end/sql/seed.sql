@@ -9,7 +9,21 @@
 INSERT INTO roles (nombre, descripcion) VALUES
 ('Admin',       'Acceso total al sistema. Puede gestionar empleados, productos, ventas y compras.'),
 ('Cajero',      'Puede registrar ventas y clientes. No puede gestionar empleados ni compras.'),
-('Bodeguero',   'Puede registrar compras y gestionar inventario. No puede registrar ventas.');
+('Bodeguero',   'Puede registrar compras y gestionar inventario. No puede registrar ventas.'),
+('Gerente',     'Acceso de solo lectura a todo el sistema mas reportes. No puede modificar datos.'),
+('Auditor',     'Acceso de solo lectura al historial de ventas, compras y reportes.');
+
+-- ============================================================
+-- USUARIOS DE PRUEBA — Gerente (rol_id=4) y Auditor (rol_id=5)
+-- Passwords: gerente123 y auditor123 (mismo hash bcrypt que los existentes por rol)
+-- ============================================================
+INSERT INTO usuarios (email, password_hash, rol_id, creado) VALUES
+('gerente@quetzalshop.com', '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 4, '2025-01-10 08:00:00'),
+('auditor@quetzalshop.com', '$2b$12$SIvkj1HLtieNh2bh8lU8VuJLEuOxmARbIlKaam1lY2E.khYX.A7Qi', 5, '2025-01-10 08:00:00');
+
+INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato, estado) VALUES
+(26, '6677889900201', 'Ricardo Estrada Molina',   '5555-0026', 'Gerente de Operaciones', '2024-01-10', 'activo'),
+(27, '7788990011302', 'Claudia Barrios Solano',   '5555-0027', 'Auditora Interna',       '2024-01-10', 'activo');
 
 -- ============================================================
 -- METODOS_PAGO

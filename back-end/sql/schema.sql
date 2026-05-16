@@ -171,3 +171,55 @@ ON items_venta(venta_id);
 -- Carga del detalle de una compra especifica
 CREATE INDEX IF NOT EXISTS ix_items_compra_compra
 ON items_compra(compra_id);
+
+-- ============================================================
+-- ROLES DE POSTGRESQL (Proyecto 3)
+-- Cada rol tiene LOGIN propio — el API conecta con el rol del usuario autenticado
+-- proy3 sigue siendo el owner pero ya no lo usa el API en runtime
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qs_admin') THEN
+    CREATE ROLE qs_admin WITH LOGIN PASSWORD 'admin_secret';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qs_cajero') THEN
+    CREATE ROLE qs_cajero WITH LOGIN PASSWORD 'cajero_secret';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qs_bodeguero') THEN
+    CREATE ROLE qs_bodeguero WITH LOGIN PASSWORD 'bodeguero_secret';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qs_gerente') THEN
+    CREATE ROLE qs_gerente WITH LOGIN PASSWORD 'gerente_secret';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qs_auditor') THEN
+    CREATE ROLE qs_auditor WITH LOGIN PASSWORD 'auditor_secret';
+  END IF;
+END
+$$;
+
+-- Permisos de conexion a la base de datos
+GRANT CONNECT ON DATABASE quetzalshop_db TO qs_admin, qs_cajero, qs_bodeguero, qs_gerente, qs_auditor;
+GRANT USAGE ON SCHEMA public TO qs_admin, qs_cajero, qs_bodeguero, qs_gerente, qs_auditor;
+
+-- qs_admin: acceso total
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO qs_admin;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO qs_admin;
+
+-- qs_cajero: ventas y clientes
+GRANT SELECT ON productos, categorias, metodos_pago, clientes, ventas, items_venta TO qs_cajero;
+GRANT INSERT, UPDATE ON clientes TO qs_cajero;
+GRANT INSERT ON ventas, items_venta TO qs_cajero;
+GRANT USAGE, SELECT ON SEQUENCE ventas_id_seq, items_venta_venta_id_seq, clientes_id_seq TO qs_cajero;
+
+-- qs_bodeguero: inventario y compras
+GRANT SELECT ON categorias TO qs_bodeguero;
+GRANT SELECT, INSERT, UPDATE ON productos, proveedores, producto_proveedor TO qs_bodeguero;
+GRANT DELETE ON producto_proveedor TO qs_bodeguero;
+GRANT SELECT, INSERT ON compras, items_compra TO qs_bodeguero;
+GRANT USAGE, SELECT ON SEQUENCE productos_id_seq, proveedores_id_seq, compras_id_seq TO qs_bodeguero;
+
+-- qs_gerente: solo lectura total
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO qs_gerente;
+
+-- qs_auditor: solo historial de ventas y compras
+GRANT SELECT ON ventas, items_venta, compras, items_compra TO qs_auditor;

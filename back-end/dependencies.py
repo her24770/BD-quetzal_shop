@@ -6,16 +6,16 @@ from config import settings
 
 security = HTTPBearer()
 
+# Estructura que representa al usuario autenticado extraído del JWT
 class TokenData:
-    """Datos extraídos del JWT"""
     def __init__(self, user_id: int, email: str, rol_id: int, empleado_id: int = None):
         self.user_id = user_id
         self.email = email
         self.rol_id = rol_id
         self.empleado_id = empleado_id
 
+# Genera un JWT firmado con los datos del usuario y tiempo de expiración
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
-    """Crea un JWT con los datos proporcionados"""
     to_encode = data.copy()
 
     if expires_delta:
@@ -32,11 +32,8 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     )
     return encoded_jwt
 
+# Decodifica y valida el JWT del header Authorization — lanza 401 si es inválido o expirado
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenData:
-    """
-    Extrae y valida el JWT del header Authorization.
-    Lanza HTTPException 401 si el token es inválido o expirado.
-    """
     token = credentials.credentials
 
     try:
@@ -71,15 +68,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-def require_role(*allowed_roles: int):
-    """
-    Decorador para verificar que el usuario tiene uno de los roles permitidos.
+# Dependencia para rutas exclusivas del Admin (rol_id=1)
+def require_admin(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+    if current_user.rol_id != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede acceder a este recurso"
+        )
+    return current_user
 
-    Uso:
-        @router.get("/admin")
-        async def admin_endpoint(current_user: TokenData = Depends(require_role(1))):
-            ...
-    """
+# Dependencia de roles múltiples — verifica que el usuario tenga alguno de los roles permitidos
+def require_role(*allowed_roles: int):
     async def role_checker(current_user: TokenData = Depends(get_current_user)) -> TokenData:
         if current_user.rol_id not in allowed_roles:
             raise HTTPException(
