@@ -16,14 +16,15 @@ def get_by_id(compra_id: int) -> CompraResponse:
     return compra
 
 
-# Registra una nueva compra — el empleado_id viene del token, no del body
-def crear(body: CompraCreate, empleado_id: int) -> CompraResponse:
+# Registra una nueva compra — empleado_id y rol_id vienen del token
+def crear(body: CompraCreate, empleado_id: int, rol_id: int) -> CompraResponse:
     items = [item.model_dump() for item in body.items]
     try:
         return compras_query.crear(
             empleado_id,
             body.numero_factura,
             items,
+            rol_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

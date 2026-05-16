@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from database.queries import productos as productos_query
-from schemas.producto import ProductoCreate, ProductoUpdate, ProductoResponse
+from schemas.producto import ProductoCreate, ProductoUpdate, ProductoResponse, StockUpdate
 
 
 # Retorna la lista completa de productos con su categoría
@@ -42,12 +42,20 @@ def update(producto_id: int, body: ProductoUpdate) -> ProductoResponse:
     return producto
 
 
-# Elimina un producto; lanza 404 si no existe y 409 si tiene referencias activas
-def delete(producto_id: int) -> dict:
+# Elimina un producto via SP — rol_id del token selecciona el pool de BD
+def delete(producto_id: int, rol_id: int) -> dict:
     try:
-        eliminado = productos_query.delete(producto_id)
+        eliminado = productos_query.delete(producto_id, rol_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     if not eliminado:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
     return {"message": "Producto eliminado correctamente"}
+
+
+# Ajusta el stock via sp_actualizar_stock — incrementar o decrementar
+def actualizar_stock(producto_id: int, body: StockUpdate, rol_id: int) -> dict:
+    try:
+        return productos_query.actualizar_stock(producto_id, body.cantidad, body.operacion, rol_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

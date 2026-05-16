@@ -19,8 +19,8 @@ def get_by_id(empleado_id: int) -> EmpleadoResponse:
     return empleado
 
 
-# Crea un usuario y su empleado en una sola transacción
-def create(body: EmpleadoCreate) -> EmpleadoResponse:
+# Crea un usuario y su empleado en una sola transacción — rol_id del token para el pool de BD
+def create(body: EmpleadoCreate, rol_id: int) -> EmpleadoResponse:
     try:
         return empleados_query.create(
             body.email,
@@ -31,6 +31,7 @@ def create(body: EmpleadoCreate) -> EmpleadoResponse:
             body.telefono,
             body.cargo,
             body.fecha_contrato,
+            rol_id,
         )
     except Exception as e:
         if "unique" in str(e).lower() and "email" in str(e).lower():

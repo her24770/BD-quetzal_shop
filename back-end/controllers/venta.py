@@ -21,8 +21,8 @@ def get_metodos_pago() -> list:
     return metodos_pago_query.get_all()
 
 
-# Registra una nueva venta — el empleado_id viene del token, no del body
-def crear(body: VentaCreate, empleado_id: int) -> VentaResponse:
+# Registra una nueva venta — empleado_id y rol_id vienen del token
+def crear(body: VentaCreate, empleado_id: int, rol_id: int) -> VentaResponse:
     items = [item.model_dump() for item in body.items]
     try:
         return ventas_query.crear(
@@ -31,6 +31,7 @@ def crear(body: VentaCreate, empleado_id: int) -> VentaResponse:
             body.metodo_pago_id,
             body.descuento,
             items,
+            rol_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
