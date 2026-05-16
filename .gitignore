@@ -4,6 +4,9 @@ venv/
 env/
 ENV/
 
+# DOcker
+docker-compose.yml
+
 # Variables de entorno
 .env
 *.env
