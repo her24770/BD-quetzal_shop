@@ -89,18 +89,44 @@ def update(producto_id: int, campos: dict) -> dict | None:
         return_connection(conn)
 
 
-# Elimina un producto por ID; lanza ValueError si tiene referencias activas
-def delete(producto_id: int) -> bool:
-    conn = get_connection()
+# Delega a sp_eliminar_producto — captura FK sin explotar, retorna mensaje en p_resultado
+def delete(producto_id: int, rol_id: int) -> bool:
+    conn = get_connection(rol_id)
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM productos WHERE id = %s", (producto_id,))
-            conn.commit()
-            return cur.rowcount > 0
-    except Exception as e:
+            cur.execute("CALL sp_eliminar_producto(%s, %s)", (producto_id, None))
+            resultado = cur.fetchone()[0]
+        conn.commit()
+        if resultado == 'OK':
+            return True
+        if resultado == 'NOT_FOUND':
+            return False
+        raise ValueError(resultado)
+    except ValueError:
         conn.rollback()
-        if "foreign key" in str(e).lower() or "violates" in str(e).lower():
-            raise ValueError("El producto no se puede eliminar porque está referenciado en ventas, compras o proveedores")
+        raise
+    except Exception:
+        conn.rollback()
         raise
     finally:
-        return_connection(conn)
+        return_connection(conn, rol_id)
+
+
+# Delega a sp_actualizar_stock — retorna stock nuevo y mensaje; lanza ValueError si falla
+def actualizar_stock(producto_id: int, cantidad: int, operacion: str, rol_id: int) -> dict:
+    conn = get_connection(rol_id)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "CALL sp_actualizar_stock(%s, %s, %s, %s, %s)",
+                (producto_id, cantidad, operacion, None, None)
+            )
+            row = cur.fetchone()
+            stock_nuevo, mensaje = row[0], row[1]
+        conn.commit()
+        return {"stock_nuevo": stock_nuevo, "mensaje": mensaje}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        return_connection(conn, rol_id)

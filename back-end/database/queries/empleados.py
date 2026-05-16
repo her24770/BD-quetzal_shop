@@ -44,29 +44,26 @@ def get_by_id(empleado_id: int) -> dict | None:
         return_connection(conn)
 
 
-# Crea el usuario y el empleado en una sola transacción
-def create(email: str, password_hash: str, rol_id: int, dpi: str, nombre: str, telefono: str, cargo: str, fecha_contrato: str) -> dict:
-    conn = get_connection()
+# Delega a sp_crear_empleado — garantiza que usuario y empleado se crean juntos o ninguno
+def create(email: str, password_hash: str, rol_id_empleado: int, dpi: str, nombre: str,
+           telefono: str, cargo: str, fecha_contrato: str, rol_id: int) -> dict:
+    conn = get_connection(rol_id)
     try:
+        conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO usuarios (email, password_hash, rol_id) VALUES (%s, %s, %s) RETURNING id",
-                (email, password_hash, rol_id),
+                "CALL sp_crear_empleado(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (email, password_hash, rol_id_empleado, dpi, nombre, telefono, cargo, fecha_contrato, None, None)
             )
-            usuario_id = cur.fetchone()[0]
-            cur.execute("""
-                INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato))
-            empleado_id = cur.fetchone()[0]
-            conn.commit()
+            row = cur.fetchone()
+            empleado_id = row[1]
+        conn.autocommit = False
         return get_by_id(empleado_id)
     except Exception:
-        conn.rollback()
+        conn.autocommit = False
         raise
     finally:
-        return_connection(conn)
+        return_connection(conn, rol_id)
 
 
 # Actualiza solo los campos recibidos y retorna el empleado actualizado

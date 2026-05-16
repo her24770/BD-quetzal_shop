@@ -23,7 +23,6 @@ def get_stats() -> dict:
             """)
             compras_mes = float(cur.fetchone()[0])
 
-            # Usa la vista v_stock_bajo para contar productos críticos
             cur.execute("SELECT COUNT(*) FROM v_stock_bajo")
             stock_bajo = int(cur.fetchone()[0])
 
@@ -140,6 +139,21 @@ def get_productos_bajo_vendidos() -> list[dict]:
                   )
                 ORDER BY p.stock ASC
             """)
+            cols = [desc[0] for desc in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+    finally:
+        return_connection(conn)
+
+
+# Llama a sp_reporte_ventas_periodo para agregar ventas diarias en un rango de fechas
+def get_ventas_periodo(fecha_inicio: str, fecha_fin: str) -> list[dict]:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM sp_reporte_ventas_periodo(%s, %s)",
+                (fecha_inicio, fecha_fin)
+            )
             cols = [desc[0] for desc in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
     finally:

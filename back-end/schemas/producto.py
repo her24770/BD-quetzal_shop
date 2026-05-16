@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 
 
 # Datos requeridos para crear un producto
@@ -32,3 +32,9 @@ class ProductoResponse(BaseModel):
     stock_minimo: int
     categoria_id: int
     categoria: str
+
+
+# Datos para ajustar el stock via sp_actualizar_stock
+class StockUpdate(BaseModel):
+    cantidad: int
+    operacion: Literal["incrementar", "decrementar"]
