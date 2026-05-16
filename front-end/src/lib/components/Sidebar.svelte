@@ -8,14 +8,14 @@
   export let open: boolean = false;
 
   const allNavItems = [
-    { label: 'Dashboard',      href: '/dashboard',                   icon: IC.home,     exact: true, roles: [1, 2, 3] },
-    { label: 'Productos',      href: '/dashboard/productos',         icon: IC.box,      badge: true, roles: [1, 3] },
-    { label: 'Categorías',     href: '/dashboard/categorias',        icon: IC.tag,                   roles: [1, 3] },
-    { label: 'Proveedores',    href: '/dashboard/proveedores',       icon: IC.truck,                 roles: [1, 3] },
-    { label: 'Clientes',       href: '/dashboard/clientes',          icon: IC.users,                 roles: [1, 2] },
+    { label: 'Dashboard',      href: '/dashboard',                   icon: IC.home,     exact: true, roles: [1, 2, 3, 4, 5] },
+    { label: 'Productos',      href: '/dashboard/productos',         icon: IC.box,      badge: true, roles: [1, 3, 4] },
+    { label: 'Categorías',     href: '/dashboard/categorias',        icon: IC.tag,                   roles: [1, 3, 4] },
+    { label: 'Proveedores',    href: '/dashboard/proveedores',       icon: IC.truck,                 roles: [1, 3, 4] },
+    { label: 'Clientes',       href: '/dashboard/clientes',          icon: IC.users,                 roles: [1, 2, 4] },
     { label: 'Transacciones',  href: '/dashboard/transacciones',     icon: IC.transfer,              roles: [1, 2, 3] },
-    { label: 'Historial',      href: '/dashboard/historial',         icon: IC.chart,                 roles: [1, 2, 3] },
-    { label: 'Empleados',      href: '/dashboard/empleados',         icon: IC.person,                roles: [1] },
+    { label: 'Historial',      href: '/dashboard/historial',         icon: IC.chart,                 roles: [1, 2, 3, 4, 5] },
+    { label: 'Empleados',      href: '/dashboard/empleados',         icon: IC.person,                roles: [1, 4] },
   ];
 
   $: rolId    = $auth.user?.rol_id ?? 0;

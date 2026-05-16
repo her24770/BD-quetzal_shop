@@ -7,6 +7,7 @@
   import { filtrosProducto } from '$lib/stores/filtros';
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
+  import { requireRole } from '$lib/guards';
 
   interface Categoria { id: number; nombre: string; }
   interface Producto {
@@ -36,8 +37,9 @@
     return { id: 0, nombre: '', descripcion: '', precio: '', stock: '', stock_minimo: '', categoria_id: '' };
   }
 
-  $: isAdmin = $auth.user?.rol_id === 1;
-  $: token   = $auth.token ?? '';
+  $: rolId    = $auth.user?.rol_id ?? 0;
+  $: canEdit  = [1, 3].includes(rolId);
+  $: token    = $auth.token ?? '';
 
   $: productosFiltrados = productos.filter(p => {
     const st = stockStatus(p);
@@ -52,6 +54,7 @@
                          $filtrosProducto.stock_status !== 'todos';
 
   onMount(async () => {
+    if (!requireRole([1, 3, 4])) return;
     const [r1, r2] = await Promise.all([
       apiFetch('/productos',  token),
       apiFetch('/categorias', token),
@@ -225,7 +228,7 @@
 <div class="section-header">
   <h2 class="page-title">Productos</h2>
   <div class="header-actions">
-    {#if isAdmin}
+    {#if canEdit}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo producto
       </button>
@@ -279,13 +282,13 @@
           <th>Categoría</th>
           <th>Precio</th>
           <th>Stock</th>
-          {#if isAdmin}<th>Acciones</th>{/if}
+          {#if canEdit}<th>Acciones</th>{/if}
         </tr>
       </thead>
       <tbody>
         {#if productosFiltrados.length === 0}
           <tr class="empty-row">
-            <td colspan={isAdmin ? 6 : 5}>
+            <td colspan={canEdit ? 6 : 5}>
               {hayFiltrosActivos ? 'Sin productos que coincidan con los filtros' : 'Sin productos registrados'}
             </td>
           </tr>
@@ -305,7 +308,7 @@
                   {/if}
                 </div>
               </td>
-              {#if isAdmin}
+              {#if canEdit}
                 <td>
                   <div class="row-actions">
                     <button class="btn btn-sm btn-blue" on:click={() => startEdit(p)}>

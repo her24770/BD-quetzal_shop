@@ -4,6 +4,7 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
+  import { requireRole } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosVentas } from '$lib/stores/filtros';
 
@@ -24,6 +25,7 @@
   }
 
   onMount(async () => {
+    if (!requireRole([1, 2, 4])) return;
     const r = await apiFetch('/ventas', token);
     if (r.ok) ventas = await r.json();
     else errorMsg = 'Error al cargar ventas';

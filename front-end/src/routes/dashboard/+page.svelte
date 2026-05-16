@@ -25,8 +25,8 @@
 
   $: rolId  = $auth.user?.rol_id ?? 0;
   $: token  = $auth.token ?? '';
-  $: isAdmin  = rolId === 1;
-  $: canVerVentas = [1, 2].includes(rolId);
+  $: isAdmin      = rolId === 1;
+  $: canVerVentas = [1, 2, 4, 5].includes(rolId);
 
   $: user = $auth.user;
 

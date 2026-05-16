@@ -5,6 +5,7 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
+  import { requireRole } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosClientes } from '$lib/stores/filtros';
 
@@ -23,10 +24,12 @@
 
   function emptyForm() { return { id: 0, nombre: '', nit: '', telefono: '', direccion: '' }; }
 
-  $: isAdmin = $auth.user?.rol_id === 1;
-  $: token   = $auth.token ?? '';
+  $: rolId    = $auth.user?.rol_id ?? 0;
+  $: canEdit  = [1, 2].includes(rolId);
+  $: token    = $auth.token ?? '';
 
   onMount(async () => {
+    if (!requireRole([1, 2, 4])) return;
     const r = await apiFetch('/clientes', token);
     if (r.ok) clientes = await r.json();
     else pageError = 'Error al cargar clientes';
@@ -150,7 +153,7 @@
 <div class="section-header">
   <h2 class="page-title">Clientes</h2>
   <div class="header-actions">
-    {#if isAdmin}
+    {#if canEdit}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo cliente
       </button>
@@ -185,12 +188,12 @@
           <th>NIT</th>
           <th>Teléfono</th>
           <th>Dirección</th>
-          {#if isAdmin}<th>Acciones</th>{/if}
+          {#if canEdit}<th>Acciones</th>{/if}
         </tr>
       </thead>
       <tbody>
         {#if clientesFiltrados.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}</td></tr>
+          <tr class="empty-row"><td colspan={canEdit ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}</td></tr>
         {:else}
           {#each clientesFiltrados as c}
             <tr>
@@ -198,7 +201,7 @@
               <td><span class="cell-mono">{c.nit}</span></td>
               <td>{c.telefono}</td>
               <td><span class="cell-sub">{c.direccion}</span></td>
-              {#if isAdmin}
+              {#if canEdit}
                 <td>
                   <div class="row-actions">
                     <button class="btn btn-sm btn-blue" on:click={() => startEdit(c)}>

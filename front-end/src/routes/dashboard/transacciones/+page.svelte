@@ -4,6 +4,7 @@
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
+  import { requireRole } from '$lib/guards';
 
   interface Producto   { id: number; nombre: string; stock: number; precio: number; }
   interface Cliente    { id: number; nombre: string; nit: string; }
@@ -107,6 +108,7 @@
   }
 
   onMount(async () => {
+    if (!requireRole([1, 2, 3])) return;
     const calls: Promise<any>[] = [reloadProductos()];
     if (canVentas) {
       calls.push(

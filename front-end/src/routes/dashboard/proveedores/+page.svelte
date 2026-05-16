@@ -7,6 +7,7 @@
   import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
   import { filtrosProveedores } from '$lib/stores/filtros';
+  import { requireRole } from '$lib/guards';
 
   interface Proveedor { id: number; nombre: string; telefono: string; email: string; direccion: string; }
 
@@ -23,10 +24,12 @@
 
   function emptyForm() { return { id: 0, nombre: '', telefono: '', email: '', direccion: '' }; }
 
-  $: isAdmin = $auth.user?.rol_id === 1;
-  $: token   = $auth.token ?? '';
+  $: rolId    = $auth.user?.rol_id ?? 0;
+  $: canEdit  = [1, 3].includes(rolId);
+  $: token    = $auth.token ?? '';
 
   onMount(async () => {
+    if (!requireRole([1, 3, 4])) return;
     const r = await apiFetch('/proveedores', token);
     if (r.ok) proveedores = await r.json();
     else pageError = 'Error al cargar proveedores';
@@ -150,7 +153,7 @@
 <div class="section-header">
   <h2 class="page-title">Proveedores</h2>
   <div class="header-actions">
-    {#if isAdmin}
+    {#if canEdit}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo proveedor
       </button>
@@ -185,12 +188,12 @@
           <th>Teléfono</th>
           <th>Email</th>
           <th>Dirección</th>
-          {#if isAdmin}<th>Acciones</th>{/if}
+          {#if canEdit}<th>Acciones</th>{/if}
         </tr>
       </thead>
       <tbody>
         {#if proveedoresFiltrados.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}</td></tr>
+          <tr class="empty-row"><td colspan={canEdit ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}</td></tr>
         {:else}
           {#each proveedoresFiltrados as p}
             <tr>
@@ -198,7 +201,7 @@
               <td>{p.telefono}</td>
               <td><span class="cell-sub">{p.email}</span></td>
               <td><span class="cell-sub">{p.direccion}</span></td>
-              {#if isAdmin}
+              {#if canEdit}
                 <td>
                   <div class="row-actions">
                     <button class="btn btn-sm btn-blue" on:click={() => startEdit(p)}>

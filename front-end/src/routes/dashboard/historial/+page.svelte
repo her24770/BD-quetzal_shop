@@ -14,8 +14,8 @@
   let loading = true;
 
   $: rolId      = $auth.user?.rol_id ?? 0;
-  $: canVentas  = [1, 2].includes(rolId);
-  $: canCompras = [1, 3].includes(rolId);
+  $: canVentas  = [1, 2, 4, 5].includes(rolId);
+  $: canCompras = [1, 3, 4, 5].includes(rolId);
   $: token      = $auth.token ?? '';
 
   let activeTab: 'ventas' | 'compras' = 'ventas';
