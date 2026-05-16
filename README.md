@@ -1,6 +1,6 @@
 # QuetzalShop — Sistema de gestion de tienda
 
-Proyecto 2 — cc3088 Bases de Datos 1 | UVG Ciclo 1 2026
+Proyecto 2 — cc3062 Sistemas y Tecnologías Web | UVG Ciclo 1 2026
 
 Sistema de punto de venta para una tienda, compuesto por una base de datos PostgreSQL, una API REST con FastAPI y una interfaz web con SvelteKit. El stack completo se levanta con un solo comando mediante Docker Compose.
 
@@ -22,9 +22,12 @@ git clone <url-del-repositorio>
 cd BD-quetzal_shop
 ```
 
-### 2. Crear el archivo de variables de entorno
+### 2. Copiar los archivos de configuracion
+
+Tanto `docker-compose.yml` como `.env` estan en `.gitignore` y deben generarse a partir de sus ejemplos incluidos en el repositorio:
 
 ```bash
+cp docker-compose.yml.example docker-compose.yml
 cp .env.example .env
 ```
 
@@ -60,14 +63,16 @@ No es necesario cambiar ningun valor para ejecutar el proyecto en desarrollo loc
 ## Levantar el proyecto
 
 ```bash
+cp docker-compose.yml.example docker-compose.yml
+cp .env.example .env
 docker compose up
 ```
 
 Docker Compose construye las imagenes y levanta tres servicios en orden:
 
 1. **db** — PostgreSQL 15. Al iniciarse por primera vez carga automaticamente `schema.sql`, `views.sql` y `seed.sql`, creando tablas, vistas y datos de prueba.
-2. **backend** — FastAPI en `http://localhost:8000`. Espera a que la base de datos este lista (healthcheck) antes de arrancar.
-3. **frontend** — SvelteKit en `http://localhost:5173`. Espera a que el backend este disponible.
+2. **backend** — FastAPI en. Espera a que la base de datos este lista (healthcheck) antes de arrancar.
+3. **frontend** — SvelteKit. Espera a que el backend este disponible.
 
 Para ejecutar en segundo plano:
 
@@ -90,6 +95,7 @@ docker compose down -v
 ---
 
 ## URLs de acceso
+segun el .example
 
 | Servicio        | URL                        |
 |-----------------|----------------------------|
@@ -241,100 +247,28 @@ El router `/reportes` expone cinco endpoints que agregan datos reales de la base
 
 ### II. Frontend — SvelteKit (equivalentes a React)
 
-El proyecto usa SvelteKit como framework frontend. A continuacion se documenta el concepto de React que exige la rubrica y su equivalente directo en Svelte.
+El proyecto usa SvelteKit como framework frontend, con autorizacion del catedratico. A continuacion se documenta como cada concepto de React exigido en la rubrica fue implementado con su equivalente directo en Svelte.
 
 **Navegacion entre vistas → SvelteKit file-based routing**
-React Router define rutas con `<Route path="...">`. SvelteKit usa el sistema de archivos: cada archivo `+page.svelte` dentro de `src/routes/` es automaticamente una ruta. El proyecto tiene 11 rutas distintas:
-
-| Ruta | Archivo |
-|------|---------|
-| `/` | `src/routes/+page.svelte` (login) |
-| `/dashboard` | `src/routes/dashboard/+page.svelte` |
-| `/dashboard/productos` | `src/routes/dashboard/productos/+page.svelte` |
-| `/dashboard/categorias` | `src/routes/dashboard/categorias/+page.svelte` |
-| `/dashboard/clientes` | `src/routes/dashboard/clientes/+page.svelte` |
-| `/dashboard/proveedores` | `src/routes/dashboard/proveedores/+page.svelte` |
-| `/dashboard/empleados` | `src/routes/dashboard/empleados/+page.svelte` |
-| `/dashboard/transacciones` | `src/routes/dashboard/transacciones/+page.svelte` |
-| `/dashboard/historial` | `src/routes/dashboard/historial/+page.svelte` |
-| `/dashboard/ventas` | `src/routes/dashboard/ventas/+page.svelte` |
-| `/dashboard/compras` | `src/routes/dashboard/compras/+page.svelte` |
-
-La navegacion protegida (redireccion si no hay sesion activa) se maneja en `src/routes/dashboard/+layout.svelte`.
+En lugar de React Router con componentes `<Route>`, SvelteKit genera las rutas automaticamente a partir de la estructura de carpetas en `src/routes/`. El proyecto tiene 11 rutas distintas: el login en la raiz (`/`), el dashboard principal y nueve modulos del sistema (productos, categorias, clientes, proveedores, empleados, transacciones, historial, ventas y compras). La navegacion protegida —redireccion al login si no hay sesion activa— se maneja en el layout compartido del dashboard (`src/routes/dashboard/+layout.svelte`), de manera analoga a un componente `<PrivateRoute>` de React Router.
 
 **Estado global con React Context → Svelte writable store**
-React Context requiere `createContext`, un `Provider` y `useContext` en cada componente. En Svelte, un `writable` store exportado desde `src/lib/stores/auth.ts` cumple el mismo rol: cualquier componente que lo importe puede leer el estado global con `$auth`. El store persiste el token JWT en `localStorage` y expone los metodos `login` y `logout`.
+Svelte reemplaza el patron `createContext` + `Provider` + `useContext` con stores exportados desde modulos compartidos en `src/lib/stores/`. El proyecto usa tres stores globales: `auth.ts` gestiona la sesion del usuario y el token JWT con persistencia en `localStorage` y metodos `login` y `logout` accesibles desde cualquier componente; `filtros.ts` mantiene el estado de busqueda y filtros de cada pagina del dashboard; y `theme.ts` controla el tema claro/oscuro. No se requiere ningun Provider en el arbol de componentes: cualquier archivo que importe el store puede leer y modificar el estado global directamente.
 
 **useState + useEffect + useMemo/useCallback → reactividad de Svelte**
-
-| Hook de React | Equivalente en Svelte |
-|---|---|
-| `useState(valor)` | `let variable = valor` — Svelte detecta cambios automaticamente |
-| `useEffect(() => {}, [])` | `onMount(async () => { ... })` — se ejecuta al montar el componente |
-| `useMemo(() => calc, [deps])` | `$: computado = expresion` — se recalcula cuando cambian sus dependencias |
-| `useCallback(fn, [deps])` | Funciones normales en `<script>` — Svelte no requiere memoizacion manual |
-
-Ejemplo real en `productos/+page.svelte`:
-```js
-// useMemo equivalente — se recalcula cuando cambia el store o los datos
-$: productosFiltrados = productos.filter(p => { ... });
-
-// useEffect equivalente
-onMount(async () => {
-  const r = await apiFetch('/productos', token);
-  if (r.ok) productos = await r.json();
-});
-```
+Svelte maneja estos cuatro hooks con mecanismos propios del compilador. Las variables declaradas con `let` en el bloque `<script>` son reactivas por defecto —equivalente a `useState`—: cualquier reasignacion dispara una actualizacion del DOM sin necesidad de un setter explicito. Los efectos de montaje se implementan con `onMount`, que se ejecuta una unica vez al insertar el componente en el DOM, cumpliendo el rol de `useEffect` con arreglo de dependencias vacio. Los valores derivados se expresan con instrucciones reactivas prefijadas con `$:`, que el compilador recalcula automaticamente cada vez que cambia alguna de sus dependencias, reemplazando `useMemo`; en `productos/+page.svelte` esto se usa para calcular la lista filtrada cada vez que cambia el store de filtros o el arreglo de productos. Las funciones de evento —handlers de formularios, apertura y cierre de modales, acciones de tabla— se definen directamente en `<script>` sin necesitar `useCallback`, porque Svelte no re-ejecuta el bloque de script en cada render.
 
 **Flujo de estado complejo con useReducer → custom store con acciones**
-`useReducer` centraliza el estado y lo modifica solo mediante `dispatch({ type, payload })`. En Svelte el patron equivalente es un custom store que expone metodos nombrados. Implementado en `src/lib/stores/filtros.ts` para todas las paginas del dashboard:
-
-```js
-// Svelte — equivalente a useReducer
-function createFiltrosProductoStore() {
-  const { subscribe, set, update } = writable({ busqueda: '', categoria_id: '', stock_status: 'todos' });
-  return {
-    subscribe,
-    setBusqueda:    (v)  => update(s => ({ ...s, busqueda: v })),
-    setCategoria:   (id) => update(s => ({ ...s, categoria_id: id })),
-    setStockStatus: (v)  => update(s => ({ ...s, stock_status: v })),
-    reset:          ()   => set({ busqueda: '', categoria_id: '', stock_status: 'todos' }),
-  };
-}
-```
-
-Este patron se aplica en las paginas de productos, ventas, compras, clientes, categorias, proveedores y empleados.
+El archivo `src/lib/stores/filtros.ts` implementa el patron equivalente a `useReducer`: cada store de filtros expone metodos nombrados (`setBusqueda`, `setCategoria`, `setStockStatus`, `reset`) en lugar de un `set` generico, de manera que el estado solo puede modificarse a traves de acciones semanticas definidas, analogas a los `type` de un reducer. Este patron se aplica en siete paginas del dashboard —productos, ventas, compras, clientes, categorias, proveedores y empleados—, cada una con su propio store de filtros tipado en TypeScript.
 
 **Formularios controlados con validacion → bind:value + validacion en submit**
-React usa `value={state}` + `onChange` para formularios controlados. Svelte usa `bind:value` que sincroniza automaticamente el input con la variable. La validacion ocurre en `saveForm()` antes de llamar a la API, mostrando el mensaje de error si algun campo requerido esta vacio.
-
-```js
-if (!form.nombre || !form.precio || !form.stock) {
-  errorMsg = 'Completa todos los campos obligatorios';
-  return;
-}
-```
-
-Los formularios de creacion y edicion se presentan en ventanas modales (`Modal.svelte`) en todas las paginas con CRUD.
+En lugar del patron `value={state}` + `onChange` de React, Svelte usa la directiva `bind:value` para sincronizacion bidireccional automatica entre cada campo del formulario y la variable correspondiente. La validacion del lado del cliente ocurre dentro de la funcion `saveForm()` antes de cualquier llamada a la API: si algun campo requerido esta vacio, se muestra un mensaje de error en pantalla y se interrumpe el envio sin recargar la pagina. Todos los formularios de creacion y edicion se presentan en el componente modal reutilizable `Modal.svelte`.
 
 **Reporte visible con datos reales → Dashboard**
-El dashboard (`/dashboard`) muestra cinco reportes con datos reales consumidos desde los endpoints de `/reportes`:
-
-1. Tarjetas de estadisticas — ventas del dia, stock bajo, compras del mes, empleados activos
-2. Top 5 productos mas vendidos con unidades e ingresos totales
-3. Ultimas ventas registradas con cliente, empleado y metodo de pago
-4. Ventas agrupadas por metodo de pago (GROUP BY + HAVING)
-5. Productos con stock critico que han sido vendidos (subquery IN)
-
-Cada reporte muestra la tecnica SQL que lo produce (CTE, GROUP BY, EXISTS, IN, VIEW).
+El dashboard en `/dashboard` consume cinco endpoints del router `/reportes` y presenta los resultados directamente en la interfaz: tarjetas con estadisticas del dia (ventas, compras del mes, stock bajo, empleados activos), top 5 productos mas vendidos con unidades e ingresos, ultimas ventas registradas con cliente y metodo de pago, ventas agrupadas por metodo de pago, y productos con stock critico que han registrado ventas. Cada seccion indica la tecnica SQL que lo respalda (CTE, GROUP BY, HAVING, EXISTS, subquery IN).
 
 **Manejo visible de errores → mensajes en pantalla**
-Cada pagina con operaciones CRUD muestra errores directamente en la interfaz sin recargar la pagina:
-
-- `form-error` — error de validacion o respuesta fallida del servidor, aparece dentro del modal
-- `page-error` — error al eliminar o al cargar datos, aparece antes de la tabla
-- Texto de estado en botones (`Guardando…`, `Agregando…`) mientras la operacion esta en curso
-- Mensaje diferenciado cuando no hay resultados por filtros activos vs. tabla realmente vacia
+Cada pagina con operaciones CRUD distingue dos contextos de error: los errores de validacion o respuesta fallida del servidor se muestran dentro del modal activo antes de que el usuario lo cierre; los errores al cargar o eliminar datos aparecen encima de la tabla principal como mensaje de pagina. Los botones de accion muestran texto de estado durante las operaciones en curso (`Guardando…`, `Agregando…`) y se deshabilitan para evitar envios duplicados. Las tablas vacias diferencian entre "sin resultados por filtros activos" y "sin registros en la base de datos".
 
 ---
 
@@ -372,7 +306,10 @@ Resultado esperado: `10 passed`.
 **El proyecto levanta con un solo comando**
 Los tres servicios (db, backend, frontend) se orquestan con Docker Compose. La base de datos incluye healthcheck para garantizar que el backend no arranque antes de que PostgreSQL este listo. Las credenciales de base de datos son `proy2` / `secret` tal como lo exige la rubrica.
 
+Tanto `docker-compose.yml` como `.env` estan en `.gitignore`; el repositorio incluye `docker-compose.yml.example` y `.env.example` con todos los valores listos para usar. Los pasos completos desde cero:
+
 ```bash
+cp docker-compose.yml.example docker-compose.yml
 cp .env.example .env
 docker compose up
 ```

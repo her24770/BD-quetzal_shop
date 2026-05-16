@@ -14,7 +14,7 @@ class Settings:
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "secret")
 
     # JWT
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "tu-clave-super-secreta")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_EXPIRE_HOURS: int = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 
