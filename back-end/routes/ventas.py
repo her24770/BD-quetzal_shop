@@ -25,8 +25,8 @@ def obtener(venta_id: int, current_user: TokenData = Depends(require_role(1, 2))
     return venta_controller.get_by_id(venta_id)
 
 
-# POST /ventas — registra una nueva venta con transacción (admin y cajero)
-# El empleado_id se toma del token para saber quién realizó la venta
+# POST /ventas — registra una nueva venta via SP (admin y cajero)
+# empleado_id y rol_id se toman del token para identificar quién vendió y qué pool usar
 @router.post("/", response_model=VentaResponse, status_code=201)
 def crear(body: VentaCreate, current_user: TokenData = Depends(require_role(1, 2))):
-    return venta_controller.crear(body, current_user.empleado_id)
+    return venta_controller.crear(body, current_user.empleado_id, current_user.rol_id)

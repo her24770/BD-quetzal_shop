@@ -19,8 +19,8 @@ def obtener(compra_id: int, current_user: TokenData = Depends(require_role(1, 3)
     return compra_controller.get_by_id(compra_id)
 
 
-# POST /compras — registra una nueva compra con transacción (admin y bodeguero)
-# El empleado_id se toma del token para saber quién registró la compra
+# POST /compras — registra una nueva compra via SP (admin y bodeguero)
+# empleado_id y rol_id se toman del token para identificar quién compró y qué pool usar
 @router.post("/", response_model=CompraResponse, status_code=201)
 def crear(body: CompraCreate, current_user: TokenData = Depends(require_role(1, 3))):
-    return compra_controller.crear(body, current_user.empleado_id)
+    return compra_controller.crear(body, current_user.empleado_id, current_user.rol_id)

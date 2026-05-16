@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from dependencies import require_role, TokenData
 from controllers import reportes as reportes_controller
@@ -34,3 +34,13 @@ def clientes_activos(current_user: TokenData = Depends(require_role(1, 2))):
 @router.get("/productos-bajo-vendidos")
 def productos_bajo_vendidos(current_user: TokenData = Depends(require_role(1, 2, 3))):
     return reportes_controller.get_productos_bajo_vendidos()
+
+
+# GET /reportes/ventas-periodo — agrega ventas diarias via SP en un rango de fechas (admin y gerente)
+@router.get("/ventas-periodo")
+def ventas_periodo(
+    fecha_inicio: str = Query(..., description="Fecha inicio YYYY-MM-DD"),
+    fecha_fin: str = Query(..., description="Fecha fin YYYY-MM-DD"),
+    current_user: TokenData = Depends(require_role(1, 4)),
+):
+    return reportes_controller.get_ventas_periodo(fecha_inicio, fecha_fin)

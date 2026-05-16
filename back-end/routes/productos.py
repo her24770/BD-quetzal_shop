@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from schemas.producto import ProductoCreate, ProductoUpdate, ProductoResponse
+from schemas.producto import ProductoCreate, ProductoUpdate, ProductoResponse, StockUpdate
 from dependencies import require_role, TokenData
 from controllers import producto as producto_controller
 
@@ -37,7 +37,13 @@ def actualizar(producto_id: int, body: ProductoUpdate, current_user: TokenData =
     return producto_controller.update(producto_id, body)
 
 
-# DELETE /productos/{id} — elimina un producto (solo admin)
+# DELETE /productos/{id} — elimina un producto via SP (solo admin)
 @router.delete("/{producto_id}")
 def eliminar(producto_id: int, current_user: TokenData = Depends(require_role(1))):
-    return producto_controller.delete(producto_id)
+    return producto_controller.delete(producto_id, current_user.rol_id)
+
+
+# PATCH /productos/{id}/stock — ajusta el stock via sp_actualizar_stock (admin y bodeguero)
+@router.patch("/{producto_id}/stock")
+def ajustar_stock(producto_id: int, body: StockUpdate, current_user: TokenData = Depends(require_role(1, 3))):
+    return producto_controller.actualizar_stock(producto_id, body, current_user.rol_id)

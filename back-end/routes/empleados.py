@@ -19,10 +19,10 @@ def obtener(empleado_id: int, current_user: TokenData = Depends(require_role(1))
     return empleado_controller.get_by_id(empleado_id)
 
 
-# POST /empleados — registra un nuevo empleado (solo admin)
+# POST /empleados — registra un nuevo empleado via SP (solo admin)
 @router.post("/", response_model=EmpleadoResponse, status_code=201)
 def crear(body: EmpleadoCreate, current_user: TokenData = Depends(require_role(1))):
-    return empleado_controller.create(body)
+    return empleado_controller.create(body, current_user.rol_id)
 
 
 # PATCH /empleados/{id} — actualiza telefono, cargo o estado del empleado (solo admin)

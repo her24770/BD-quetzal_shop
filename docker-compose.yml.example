@@ -13,6 +13,7 @@ services:
       - ./back-end/sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./back-end/sql/views.sql:/docker-entrypoint-initdb.d/02_views.sql
       - ./back-end/sql/seed.sql:/docker-entrypoint-initdb.d/03_seed.sql
+      - ./back-end/sql/stored_procedures.sql:/docker-entrypoint-initdb.d/04_stored_procedures.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
