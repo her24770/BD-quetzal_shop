@@ -1,4 +1,6 @@
 from database.connection import get_connection, return_connection
+from database.orm import get_session
+from database.models.producto import Producto
 
 
 # Trae todos los productos con su categoría por JOIN
@@ -52,41 +54,35 @@ def get_stock_bajo() -> list[dict]:
         return_connection(conn)
 
 
-# Inserta un producto y retorna el registro completo con JOIN a categoría
+# Inserta un producto via ORM y retorna el registro completo con JOIN a categoría
 def create(nombre: str, descripcion: str, precio: float, stock: int, stock_minimo: int, categoria_id: int) -> dict:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO productos (nombre, descripcion, precio, stock, stock_minimo, categoria_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (nombre, descripcion, precio, stock, stock_minimo, categoria_id))
-            conn.commit()
-            producto_id = cur.fetchone()[0]
-        return get_by_id(producto_id)
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        producto = Producto(
+            nombre=nombre, descripcion=descripcion, precio=precio,
+            stock=stock, stock_minimo=stock_minimo, categoria_id=categoria_id
+        )
+        session.add(producto)
+        session.commit()
+        session.refresh(producto)
+        producto_id = producto.id
+    # get_by_id usa psycopg2 para traer el JOIN con categoría (nombre de la categoría)
+    return get_by_id(producto_id)
 
 
-# Actualiza solo los campos recibidos y retorna el producto actualizado
+# Actualiza solo los campos recibidos via ORM y retorna el producto actualizado
 def update(producto_id: int, campos: dict) -> dict | None:
     if not campos:
         return get_by_id(producto_id)
 
-    sets = ", ".join(f"{k} = %s" for k in campos)
-    valores = list(campos.values()) + [producto_id]
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f"UPDATE productos SET {sets} WHERE id = %s", valores)
-            conn.commit()
-            if cur.rowcount == 0:
-                return None
-        return get_by_id(producto_id)
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        producto = session.get(Producto, producto_id)
+        if producto is None:
+            return None
+        for key, value in campos.items():
+            setattr(producto, key, value)
+        session.add(producto)
+        session.commit()
+    return get_by_id(producto_id)
 
 
 # Delega a sp_eliminar_producto — captura FK sin explotar, retorna mensaje en p_resultado

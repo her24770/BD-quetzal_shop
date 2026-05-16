@@ -1,7 +1,9 @@
 from database.connection import get_connection, return_connection
+from database.orm import get_session
+from database.models.empleado import Empleado
 
 
-# Trae todos los empleados con su email y rol por JOIN a usuarios y roles
+# JOIN a 3 tablas (empleados + usuarios + roles) — consulta avanzada, se mantiene en SQL
 def get_all() -> list[dict]:
     conn = get_connection()
     try:
@@ -21,7 +23,6 @@ def get_all() -> list[dict]:
         return_connection(conn)
 
 
-# Busca un empleado por ID con su email y rol, retorna None si no existe
 def get_by_id(empleado_id: int) -> dict | None:
     conn = get_connection()
     try:
@@ -66,38 +67,31 @@ def create(email: str, password_hash: str, rol_id_empleado: int, dpi: str, nombr
         return_connection(conn, rol_id)
 
 
-# Actualiza solo los campos recibidos y retorna el empleado actualizado
 def update(empleado_id: int, campos: dict) -> dict | None:
     if not campos:
         return get_by_id(empleado_id)
-
-    sets = ", ".join(f"{k} = %s" for k in campos)
-    valores = list(campos.values()) + [empleado_id]
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f"UPDATE empleados SET {sets} WHERE id = %s", valores)
-            conn.commit()
-            if cur.rowcount == 0:
-                return None
-        return get_by_id(empleado_id)
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        empleado = session.get(Empleado, empleado_id)
+        if empleado is None:
+            return None
+        for key, value in campos.items():
+            setattr(empleado, key, value)
+        session.add(empleado)
+        session.commit()
+    return get_by_id(empleado_id)
 
 
-# Elimina un empleado por ID; lanza ValueError si tiene ventas o compras registradas
 def delete(empleado_id: int) -> bool:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM empleados WHERE id = %s", (empleado_id,))
-            conn.commit()
-            return cur.rowcount > 0
-    except Exception as e:
-        conn.rollback()
-        if "foreign key" in str(e).lower() or "violates" in str(e).lower():
-            raise ValueError("No se puede eliminar: el empleado tiene ventas o compras registradas")
-        raise
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        empleado = session.get(Empleado, empleado_id)
+        if empleado is None:
+            return False
+        try:
+            session.delete(empleado)
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            if "foreign key" in str(e).lower() or "violates" in str(e).lower():
+                raise ValueError("No se puede eliminar: el empleado tiene ventas o compras registradas")
+            raise

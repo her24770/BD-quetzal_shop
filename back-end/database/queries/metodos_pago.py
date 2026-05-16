@@ -1,13 +1,10 @@
-from database.connection import get_connection, return_connection
+from sqlmodel import select
+
+from database.orm import get_session
+from database.models.metodo_pago import MetodoPago
 
 
-# Trae todos los métodos de pago disponibles
 def get_all() -> list[dict]:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, metodo FROM metodos_pago ORDER BY id")
-            cols = [desc[0] for desc in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        metodos = session.exec(select(MetodoPago).order_by(MetodoPago.id)).all()
+        return [m.model_dump() for m in metodos]

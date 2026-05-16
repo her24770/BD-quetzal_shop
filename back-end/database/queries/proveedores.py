@@ -1,42 +1,25 @@
+from sqlmodel import select
+
 from database.connection import get_connection, return_connection
+from database.orm import get_session
+from database.models.proveedor import Proveedor
 
 
-# Trae todos los proveedores ordenados alfabéticamente
 def get_all() -> list[dict]:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, nombre, telefono, email, direccion
-                FROM proveedores
-                ORDER BY nombre
-            """)
-            cols = [desc[0] for desc in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        proveedores = session.exec(select(Proveedor).order_by(Proveedor.nombre)).all()
+        return [p.model_dump() for p in proveedores]
 
 
-# Busca un proveedor por ID, retorna None si no existe
 def get_by_id(proveedor_id: int) -> dict | None:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, nombre, telefono, email, direccion
-                FROM proveedores
-                WHERE id = %s
-            """, (proveedor_id,))
-            row = cur.fetchone()
-            if row is None:
-                return None
-            cols = [desc[0] for desc in cur.description]
-            return dict(zip(cols, row))
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        proveedor = session.get(Proveedor, proveedor_id)
+        if proveedor is None:
+            return None
+        return proveedor.model_dump()
 
 
-# Trae todos los productos asociados a un proveedor con su precio de costo
+# JOIN a 3 tablas — consulta avanzada, se mantiene en SQL explícito
 def get_productos(proveedor_id: int) -> list[dict]:
     conn = get_connection()
     try:
@@ -56,55 +39,41 @@ def get_productos(proveedor_id: int) -> list[dict]:
         return_connection(conn)
 
 
-# Inserta un proveedor y retorna el registro creado
 def create(nombre: str, telefono: str, email: str, direccion: str) -> dict:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO proveedores (nombre, telefono, email, direccion)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, nombre, telefono, email, direccion
-            """, (nombre, telefono, email, direccion))
-            conn.commit()
-            cols = [desc[0] for desc in cur.description]
-            return dict(zip(cols, cur.fetchone()))
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        proveedor = Proveedor(nombre=nombre, telefono=telefono, email=email, direccion=direccion)
+        session.add(proveedor)
+        session.commit()
+        session.refresh(proveedor)
+        return proveedor.model_dump()
 
 
-# Actualiza solo los campos recibidos y retorna el proveedor actualizado
 def update(proveedor_id: int, campos: dict) -> dict | None:
     if not campos:
         return get_by_id(proveedor_id)
-
-    sets = ", ".join(f"{k} = %s" for k in campos)
-    valores = list(campos.values()) + [proveedor_id]
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f"UPDATE proveedores SET {sets} WHERE id = %s", valores)
-            conn.commit()
-            if cur.rowcount == 0:
-                return None
-        return get_by_id(proveedor_id)
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        proveedor = session.get(Proveedor, proveedor_id)
+        if proveedor is None:
+            return None
+        for key, value in campos.items():
+            setattr(proveedor, key, value)
+        session.add(proveedor)
+        session.commit()
+        session.refresh(proveedor)
+        return proveedor.model_dump()
 
 
-# Elimina un proveedor por ID; lanza ValueError si tiene compras o productos asociados
 def delete(proveedor_id: int) -> bool:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM proveedores WHERE id = %s", (proveedor_id,))
-            conn.commit()
-            return cur.rowcount > 0
-    except Exception as e:
-        conn.rollback()
-        if "foreign key" in str(e).lower() or "violates" in str(e).lower():
-            raise ValueError("No se puede eliminar: el proveedor tiene compras o productos asociados")
-        raise
-    finally:
-        return_connection(conn)
+    with get_session() as session:
+        proveedor = session.get(Proveedor, proveedor_id)
+        if proveedor is None:
+            return False
+        try:
+            session.delete(proveedor)
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            if "foreign key" in str(e).lower() or "violates" in str(e).lower():
+                raise ValueError("No se puede eliminar: el proveedor tiene compras o productos asociados")
+            raise
