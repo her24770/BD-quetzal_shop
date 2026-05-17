@@ -11,6 +11,7 @@ export interface Empleado {
   fecha_contrato: string;
   estado: string;
   email: string;
+  rol_id: number;
   rol_nombre: string;
 }
 
@@ -25,12 +26,23 @@ export interface EmpleadoForm {
   rol_id: string;
 }
 
+export interface EmpleadoEditForm {
+  nombre: string;
+  telefono: string;
+  cargo: string;
+  estado: string;
+  rol_id: string;
+}
+
 export const empleadosApi = {
   getAll:  (token: string) =>
     apiFetch('/empleados', token).then(r => parseJson<Empleado[]>(r)),
 
   create:  (token: string, data: EmpleadoForm) =>
     apiFetch('/empleados', token, { method: 'POST', body: JSON.stringify(data) }).then(r => parseJson<Empleado>(r)),
+
+  update:  (token: string, id: number, data: EmpleadoEditForm) =>
+    apiFetch(`/empleados/${id}`, token, { method: 'PATCH', body: JSON.stringify(data) }).then(r => parseJson<Empleado>(r)),
 
   delete:  (token: string, id: number) =>
     apiFetch(`/empleados/${id}`, token, { method: 'DELETE' }).then(r => parseJson(r)),

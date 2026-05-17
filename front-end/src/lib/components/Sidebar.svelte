@@ -3,23 +3,26 @@
   import Icon from './Icon.svelte';
   import { IC } from '$lib/icons';
   import { permisos } from '$lib/stores/permisos';
+  import { auth } from '$lib/stores/auth';
 
   export let lowStockCount: number = 0;
   export let open: boolean = false;
 
-  // check: null = siempre visible | array de [tabla, op] = OR entre ellos
+  // check: null = siempre visible | array de [tabla, op] = OR entre ellos | adminOnly: solo rol 1
   const allNavItems = [
-    { label: 'Dashboard',     href: '/dashboard',               icon: IC.home,     exact: true, check: null },
-    { label: 'Productos',     href: '/dashboard/productos',     icon: IC.box,      badge: true, check: [['productos',   'SELECT']] },
-    { label: 'Categorías',    href: '/dashboard/categorias',    icon: IC.tag,                   check: [['categorias',  'SELECT']] },
-    { label: 'Proveedores',   href: '/dashboard/proveedores',   icon: IC.truck,                 check: [['proveedores', 'SELECT']] },
-    { label: 'Clientes',      href: '/dashboard/clientes',      icon: IC.users,                 check: [['clientes',    'SELECT']] },
-    { label: 'Transacciones', href: '/dashboard/transacciones', icon: IC.transfer,              check: [['ventas', 'INSERT'], ['compras', 'INSERT']] },
-    { label: 'Historial',     href: '/dashboard/historial',     icon: IC.chart,                 check: [['ventas', 'SELECT'], ['compras', 'SELECT']] },
-    { label: 'Empleados',     href: '/dashboard/empleados',     icon: IC.person,                check: [['empleados',   'SELECT']] },
+    { label: 'Dashboard',     href: '/dashboard',               icon: IC.home,     exact: true,  check: null },
+    { label: 'Productos',     href: '/dashboard/productos',     icon: IC.box,      badge: true,  check: [['productos',   'SELECT']] },
+    { label: 'Categorías',    href: '/dashboard/categorias',    icon: IC.tag,                    check: [['categorias',  'SELECT']] },
+    { label: 'Proveedores',   href: '/dashboard/proveedores',   icon: IC.truck,                  check: [['proveedores', 'SELECT']] },
+    { label: 'Clientes',      href: '/dashboard/clientes',      icon: IC.users,                  check: [['clientes',    'SELECT']] },
+    { label: 'Transacciones', href: '/dashboard/transacciones', icon: IC.transfer,               check: [['ventas', 'INSERT'], ['compras', 'INSERT']] },
+    { label: 'Historial',     href: '/dashboard/historial',     icon: IC.chart,                  check: [['ventas', 'SELECT'], ['compras', 'SELECT']] },
+    { label: 'Empleados',     href: '/dashboard/empleados',     icon: IC.person,                 check: [['empleados',   'SELECT']] },
+    { label: 'Permisos',      href: '/dashboard/admin',         icon: IC.lock,     adminOnly: true, check: null },
   ];
 
   $: navItems = allNavItems.filter(item => {
+    if (item.adminOnly) return $auth.user?.rol_id === 1;
     if (!item.check) return true;
     return item.check.some(([tabla, op]) => ($permisos[tabla] ?? []).includes(op));
   });
