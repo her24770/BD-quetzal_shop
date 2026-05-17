@@ -1,37 +1,32 @@
 from fastapi import APIRouter, Depends
 
 from schemas.categoria import CategoriaCreate, CategoriaUpdate, CategoriaResponse
-from dependencies import require_role, TokenData
+from dependencies import get_current_user, TokenData
 from controllers import categoria as categoria_controller
 
 router = APIRouter()
 
 
-# GET /categorias — lista todas las categorías (todos los roles)
 @router.get("/", response_model=list[CategoriaResponse])
-def listar(current_user: TokenData = Depends(require_role(1, 2, 3))):
+def listar(current_user: TokenData = Depends(get_current_user)):
     return categoria_controller.get_all()
 
 
-# GET /categorias/{id} — obtiene una categoría por ID (todos los roles)
 @router.get("/{categoria_id}", response_model=CategoriaResponse)
-def obtener(categoria_id: int, current_user: TokenData = Depends(require_role(1, 2, 3))):
+def obtener(categoria_id: int, current_user: TokenData = Depends(get_current_user)):
     return categoria_controller.get_by_id(categoria_id)
 
 
-# POST /categorias — crea una nueva categoría (solo admin)
 @router.post("/", response_model=CategoriaResponse, status_code=201)
-def crear(body: CategoriaCreate, current_user: TokenData = Depends(require_role(1))):
+def crear(body: CategoriaCreate, current_user: TokenData = Depends(get_current_user)):
     return categoria_controller.create(body)
 
 
-# PATCH /categorias/{id} — actualiza una categoría (solo admin)
 @router.patch("/{categoria_id}", response_model=CategoriaResponse)
-def actualizar(categoria_id: int, body: CategoriaUpdate, current_user: TokenData = Depends(require_role(1))):
+def actualizar(categoria_id: int, body: CategoriaUpdate, current_user: TokenData = Depends(get_current_user)):
     return categoria_controller.update(categoria_id, body)
 
 
-# DELETE /categorias/{id} — elimina una categoría (solo admin)
 @router.delete("/{categoria_id}")
-def eliminar(categoria_id: int, current_user: TokenData = Depends(require_role(1))):
+def eliminar(categoria_id: int, current_user: TokenData = Depends(get_current_user)):
     return categoria_controller.delete(categoria_id)
