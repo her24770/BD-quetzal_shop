@@ -25,7 +25,8 @@
   function emptyForm(): CategoriaForm & { id: number } { return { id: 0, nombre: '', descripcion: '' }; }
 
   $: token     = $auth.token ?? '';
-  $: canWrite  = ($permisos['categorias'] ?? []).includes('INSERT');
+  $: canCreate = ($permisos['categorias'] ?? []).includes('INSERT');
+  $: canEdit   = ($permisos['categorias'] ?? []).includes('UPDATE');
   $: canDelete = ($permisos['categorias'] ?? []).includes('DELETE');
 
   $: categoriasFiltradas = categorias.filter(c => {
@@ -116,7 +117,7 @@
 
 <div class="section-header">
   <h2 class="page-title">Categorías</h2>
-  {#if canWrite}
+  {#if canCreate}
     <button class="btn btn-md btn-purple" on:click={openAdd}>
       <Icon path={IC.plus} size={13} /> Nueva categoría
     </button>
@@ -138,7 +139,7 @@
 {:else}
   <DataTable
     rows={categoriasFiltradas}
-    {canWrite}
+    {canEdit}
     {canDelete}
     colspan={2}
     emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin categorías registradas'}

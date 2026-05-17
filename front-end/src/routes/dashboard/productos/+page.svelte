@@ -31,7 +31,8 @@
   }
 
   $: token     = $auth.token ?? '';
-  $: canWrite  = ($permisos['productos'] ?? []).includes('INSERT');
+  $: canCreate = ($permisos['productos'] ?? []).includes('INSERT');
+  $: canEdit   = ($permisos['productos'] ?? []).includes('UPDATE');
   $: canDelete = ($permisos['productos'] ?? []).includes('DELETE');
 
   $: productosFiltrados = productos.filter(p => {
@@ -182,7 +183,7 @@
 <div class="section-header">
   <h2 class="page-title">Productos</h2>
   <div class="header-actions">
-    {#if canWrite}
+    {#if canCreate}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo producto
       </button>
@@ -224,7 +225,7 @@
 {:else}
   <DataTable
     rows={productosFiltrados}
-    {canWrite}
+    {canEdit}
     {canDelete}
     colspan={5}
     emptyMsg={hayFiltros ? 'Sin productos que coincidan con los filtros' : 'Sin productos registrados'}

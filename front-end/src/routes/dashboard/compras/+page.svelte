@@ -66,7 +66,7 @@
 {:else}
   <DataTable
     rows={comprasFiltradas}
-    canWrite={false}
+    canEdit={false}
     canDelete={false}
     colspan={5}
     emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin compras registradas'}

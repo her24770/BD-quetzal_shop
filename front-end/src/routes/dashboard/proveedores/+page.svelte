@@ -26,7 +26,8 @@
   function emptyForm(): ProveedorForm & { id: number } { return { id: 0, nombre: '', telefono: '', email: '', direccion: '' }; }
 
   $: token     = $auth.token ?? '';
-  $: canWrite  = ($permisos['proveedores'] ?? []).includes('INSERT');
+  $: canCreate = ($permisos['proveedores'] ?? []).includes('INSERT');
+  $: canEdit   = ($permisos['proveedores'] ?? []).includes('UPDATE');
   $: canDelete = ($permisos['proveedores'] ?? []).includes('DELETE');
 
   $: proveedoresFiltrados = proveedores.filter(p => {
@@ -133,7 +134,7 @@
 <div class="section-header">
   <h2 class="page-title">Proveedores</h2>
   <div class="header-actions">
-    {#if canWrite}
+    {#if canCreate}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo proveedor
       </button>
@@ -160,7 +161,7 @@
 {:else}
   <DataTable
     rows={proveedoresFiltrados}
-    {canWrite}
+    {canEdit}
     {canDelete}
     colspan={4}
     emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}

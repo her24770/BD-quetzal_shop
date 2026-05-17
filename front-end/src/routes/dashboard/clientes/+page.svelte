@@ -26,7 +26,8 @@
   function emptyForm(): ClienteForm & { id: number } { return { id: 0, nombre: '', nit: '', telefono: '', direccion: '' }; }
 
   $: token     = $auth.token ?? '';
-  $: canWrite  = ($permisos['clientes'] ?? []).includes('INSERT');
+  $: canCreate = ($permisos['clientes'] ?? []).includes('INSERT');
+  $: canEdit   = ($permisos['clientes'] ?? []).includes('UPDATE');
   $: canDelete = ($permisos['clientes'] ?? []).includes('DELETE');
 
   $: clientesFiltrados = clientes.filter(c => {
@@ -133,7 +134,7 @@
 <div class="section-header">
   <h2 class="page-title">Clientes</h2>
   <div class="header-actions">
-    {#if canWrite}
+    {#if canCreate}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo cliente
       </button>
@@ -160,7 +161,7 @@
 {:else}
   <DataTable
     rows={clientesFiltrados}
-    {canWrite}
+    {canEdit}
     {canDelete}
     colspan={4}
     emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}

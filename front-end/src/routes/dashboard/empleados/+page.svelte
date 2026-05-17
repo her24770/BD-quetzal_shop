@@ -26,8 +26,8 @@
   }
 
   $: token     = $auth.token ?? '';
+  $: canCreate = ($permisos['empleados'] ?? []).includes('INSERT');
   $: canDelete = ($permisos['empleados'] ?? []).includes('DELETE');
-  $: canWrite  = ($permisos['empleados'] ?? []).includes('INSERT');
 
   $: empleadosFiltrados = empleados.filter(e => {
     const q   = $filtrosEmpleados.busqueda.toLowerCase();
@@ -140,7 +140,7 @@
 <div class="section-header">
   <h2 class="page-title">Empleados</h2>
   <div class="header-actions">
-    {#if canWrite}
+    {#if canCreate}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo empleado
       </button>
@@ -174,7 +174,7 @@
 {:else}
   <DataTable
     rows={empleadosFiltrados}
-    canWrite={false}
+    canEdit={false}
     {canDelete}
     colspan={8}
     emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin empleados registrados'}

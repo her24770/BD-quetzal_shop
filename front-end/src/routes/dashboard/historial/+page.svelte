@@ -111,7 +111,7 @@
 
   <DataTable
     rows={ventasFiltradas}
-    canWrite={false}
+    canEdit={false}
     canDelete={false}
     colspan={8}
     emptyMsg={hayFiltrosVentas ? 'Sin coincidencias' : 'Sin ventas registradas'}
@@ -148,7 +148,7 @@
 
   <DataTable
     rows={comprasFiltradas}
-    canWrite={false}
+    canEdit={false}
     canDelete={false}
     colspan={5}
     emptyMsg={hayFiltrosCompras ? 'Sin coincidencias' : 'Sin compras registradas'}
