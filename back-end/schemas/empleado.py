@@ -16,9 +16,11 @@ class EmpleadoCreate(BaseModel):
 
 # Todos los campos son opcionales para permitir edición parcial (PATCH)
 class EmpleadoUpdate(BaseModel):
-    telefono: Optional[str] = None
-    cargo: Optional[str] = None
-    estado: Optional[str] = None
+    nombre:    Optional[str] = None
+    telefono:  Optional[str] = None
+    cargo:     Optional[str] = None
+    estado:    Optional[str] = None
+    rol_id:    Optional[int] = None
 
 
 # Datos que devuelve la API al consultar un empleado
@@ -32,4 +34,5 @@ class EmpleadoResponse(BaseModel):
     fecha_contrato: str
     estado: str
     email: str
+    rol_id: int
     rol_nombre: str

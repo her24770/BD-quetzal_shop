@@ -11,7 +11,7 @@ def get_all() -> list[dict]:
             cur.execute("""
                 SELECT e.id, e.usuario_id, e.dpi, e.nombre, e.telefono, e.cargo,
                        e.fecha_contrato::text, e.estado,
-                       u.email, r.nombre AS rol_nombre
+                       u.email, u.rol_id, r.nombre AS rol_nombre
                 FROM empleados e
                 INNER JOIN usuarios u ON e.usuario_id = u.id
                 INNER JOIN roles r    ON u.rol_id     = r.id
@@ -30,7 +30,7 @@ def get_by_id(empleado_id: int) -> dict | None:
             cur.execute("""
                 SELECT e.id, e.usuario_id, e.dpi, e.nombre, e.telefono, e.cargo,
                        e.fecha_contrato::text, e.estado,
-                       u.email, r.nombre AS rol_nombre
+                       u.email, u.rol_id, r.nombre AS rol_nombre
                 FROM empleados e
                 INNER JOIN usuarios u ON e.usuario_id = u.id
                 INNER JOIN roles r    ON u.rol_id     = r.id
@@ -68,16 +68,32 @@ def create(email: str, password_hash: str, rol_id_empleado: int, dpi: str, nombr
 
 
 def update(empleado_id: int, campos: dict) -> dict | None:
-    if not campos:
-        return get_by_id(empleado_id)
-    with get_session() as session:
-        empleado = session.get(Empleado, empleado_id)
-        if empleado is None:
-            return None
-        for key, value in campos.items():
-            setattr(empleado, key, value)
-        session.add(empleado)
-        session.commit()
+    actual = get_by_id(empleado_id)
+    if actual is None:
+        return None
+
+    rol_id_nuevo = campos.pop('rol_id', None)
+
+    if campos:
+        with get_session() as session:
+            empleado = session.get(Empleado, empleado_id)
+            if empleado is None:
+                return None
+            for key, value in campos.items():
+                setattr(empleado, key, value)
+            session.add(empleado)
+            session.commit()
+
+    if rol_id_nuevo is not None:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE usuarios SET rol_id = %s WHERE id = %s",
+                            (rol_id_nuevo, actual['usuario_id']))
+            conn.commit()
+        finally:
+            return_connection(conn)
+
     return get_by_id(empleado_id)
 
 
