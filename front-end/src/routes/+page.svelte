@@ -142,7 +142,7 @@
   }
 
   .login-card {
-    background: #fff;
+    background: var(--surface);
     border-radius: 16px;
     padding: 40px 36px;
     width: 100%;
@@ -175,14 +175,14 @@
   .brand-name {
     font-size: 22px;
     font-weight: 700;
-    color: var(--g-900);
+    color: var(--txt);
     margin: 0 0 4px;
     letter-spacing: -0.4px;
   }
 
   .brand-sub {
     font-size: 13px;
-    color: var(--g-400);
+    color: var(--txt-4);
     margin: 0;
   }
 
@@ -219,6 +219,6 @@
   }
 
   .toggle-pw:hover {
-    color: var(--g-700);
+    color: var(--txt-2);
   }
 </style>

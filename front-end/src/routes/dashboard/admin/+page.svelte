@@ -19,7 +19,7 @@
   onMount(async () => {
     if ($auth.user?.rol_id !== 1) { goto('/dashboard'); return; }
     try {
-      const all = await adminApi.getRoles();
+      const all = await adminApi.getRoles(token);
       roles = all.filter(r => r.id !== 1);
       if (roles.length) {
         activeRolId = roles[0].id;
