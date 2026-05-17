@@ -3,50 +3,36 @@
   import StatCard from '$lib/components/StatCard.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
-
-  interface Stats {
-    ventas_hoy:  { count: number; total: number };
-    compras_mes: number;
-    stock_bajo:  number;
-    empleados:   { total: number; activos: number };
-  }
-  interface TopProducto  { nombre: string; categoria: string; total_vendido: number; total_ingresos: number; }
-  interface VentaMetodo  { metodo: string; cantidad: number; total: number; }
-  interface ProductoBajo { nombre: string; stock: number; stock_minimo: number; categoria: string; }
-  interface VentaReciente { id: number; fecha: string; total: number; cliente: string; empleado: string; metodo_pago: string; }
+  import { permisos } from '$lib/stores/permisos';
+  import { formatCurrency, formatFecha } from '$lib/utils';
+  import {
+    type Stats, type TopProducto, type VentaMetodo, type ProductoBajo, type VentaReciente,
+    reportesApi,
+  } from '$lib/api/reportes';
 
   let stats: Stats | null = null;
-  let topProductos:   TopProducto[]   = [];
-  let ventasPorMetodo: VentaMetodo[]  = [];
+  let topProductos:         TopProducto[]   = [];
+  let ventasPorMetodo:      VentaMetodo[]   = [];
   let productosBajoVendidos: ProductoBajo[] = [];
-  let ultimasVentas: VentaReciente[] = [];
+  let ultimasVentas:        VentaReciente[] = [];
   let loading = true;
 
-  $: rolId  = $auth.user?.rol_id ?? 0;
-  $: token  = $auth.token ?? '';
-  $: isAdmin      = rolId === 1;
-  $: canVerVentas = [1, 2, 4, 5].includes(rolId);
-
-  $: user = $auth.user;
-
-  const fmt  = (n: number) => 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2 });
-  const fmtF = (f: string) => new Date(f).toLocaleDateString('es-GT', { month: 'short', day: 'numeric' });
+  $: token        = $auth.token ?? '';
+  $: user         = $auth.user;
+  $: canVerVentas = ($permisos['ventas'] ?? []).includes('SELECT');
 
   onMount(async () => {
-    const calls: Promise<any>[] = [
-      apiFetch('/reportes/stats',                token).then(r => r.ok && r.json().then((d: Stats) => stats = d)),
-      apiFetch('/reportes/top-productos',         token).then(r => r.ok && r.json().then((d: TopProducto[]) => topProductos = d)),
-      apiFetch('/reportes/productos-bajo-vendidos', token).then(r => r.ok && r.json().then((d: ProductoBajo[]) => productosBajoVendidos = d)),
+    const calls: Promise<void>[] = [
+      reportesApi.getStats(token).then(d           => { stats                  = d; }),
+      reportesApi.getTopProductos(token).then(d    => { topProductos           = d; }),
+      reportesApi.getBajoVendidos(token).then(d    => { productosBajoVendidos  = d; }),
     ];
-
     if (canVerVentas) {
       calls.push(
-        apiFetch('/reportes/ventas-por-metodo',  token).then(r => r.ok && r.json().then((d: VentaMetodo[]) => ventasPorMetodo = d)),
-        apiFetch('/ventas',                      token).then(r => r.ok && r.json().then((d: VentaReciente[]) => ultimasVentas = d.slice(0, 5))),
+        reportesApi.getVentasPorMetodo(token).then(d  => { ventasPorMetodo  = d; }),
+        reportesApi.getVentasRecientes(token).then(d  => { ultimasVentas    = d; }),
       );
     }
-
     await Promise.all(calls);
     loading = false;
   });
@@ -69,7 +55,7 @@
 <div class="stats-grid">
   <StatCard
     label="Ventas del día"
-    value={stats ? fmt(stats.ventas_hoy.total) : 'Q 0.00'}
+    value={stats ? formatCurrency(stats.ventas_hoy.total) : 'Q 0.00'}
     sub="{stats?.ventas_hoy.count ?? 0} transacciones"
     iconPath={IC.cart}
     iconBg="#EDE9FE" iconColor="#7C3AED"
@@ -83,7 +69,7 @@
   />
   <StatCard
     label="Compras del mes"
-    value={stats ? fmt(stats.compras_mes) : 'Q 0.00'}
+    value={stats ? formatCurrency(stats.compras_mes) : 'Q 0.00'}
     sub="Acumulado del mes"
     iconPath={IC.pkg}
     iconBg="#DBEAFE" iconColor="#2563EB"
@@ -97,7 +83,7 @@
   />
 </div>
 
-<!-- ── Top 5 productos más vendidos (CTE + GROUP BY) ── -->
+<!-- ── Top 5 productos más vendidos ── -->
 {#if topProductos.length > 0}
   <div class="section-block">
     <div class="section-head">
@@ -120,7 +106,7 @@
               </td>
               <td>{p.categoria}</td>
               <td><span class="cell-num">{p.total_vendido}</span> uds.</td>
-              <td><span class="cell-total">{fmt(p.total_ingresos)}</span></td>
+              <td><span class="cell-total">{formatCurrency(p.total_ingresos)}</span></td>
             </tr>
           {/each}
         </tbody>
@@ -129,7 +115,7 @@
   </div>
 {/if}
 
-<!-- ── Últimas ventas (VIEW v_ventas_completo) ── -->
+<!-- ── Últimas ventas ── -->
 {#if canVerVentas && ultimasVentas.length > 0}
   <div class="section-block">
     <div class="section-head">
@@ -145,11 +131,11 @@
           {#each ultimasVentas as v}
             <tr>
               <td><span class="cell-id">#{v.id}</span></td>
-              <td>{fmtF(v.fecha)}</td>
+              <td>{formatFecha(v.fecha)}</td>
               <td><span class="cell-main">{v.cliente}</span></td>
               <td><span class="cell-sub">{v.empleado}</span></td>
               <td>{v.metodo_pago}</td>
-              <td><span class="cell-total">{fmt(v.total)}</span></td>
+              <td><span class="cell-total">{formatCurrency(v.total)}</span></td>
             </tr>
           {/each}
         </tbody>
@@ -158,7 +144,7 @@
   </div>
 {/if}
 
-<!-- ── Ventas por método de pago (GROUP BY + HAVING) ── -->
+<!-- ── Ventas por método de pago ── -->
 {#if canVerVentas && ventasPorMetodo.length > 0}
   <div class="section-block">
     <div class="section-head">
@@ -175,7 +161,7 @@
             <tr>
               <td><span class="cell-main">{m.metodo}</span></td>
               <td>{m.cantidad}</td>
-              <td><span class="cell-total">{fmt(m.total)}</span></td>
+              <td><span class="cell-total">{formatCurrency(m.total)}</span></td>
             </tr>
           {/each}
         </tbody>
@@ -184,7 +170,7 @@
   </div>
 {/if}
 
-<!-- ── Productos con stock bajo y vendidos (IN subquery) ── -->
+<!-- ── Productos con stock bajo y vendidos ── -->
 {#if productosBajoVendidos.length > 0}
   <div class="section-block">
     <div class="section-head">

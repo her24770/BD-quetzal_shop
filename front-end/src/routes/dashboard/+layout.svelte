@@ -5,11 +5,11 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Toast from '$lib/components/Toast.svelte';
+  import ConfirmModal from '$lib/components/ConfirmModal.svelte';
   import { auth } from '$lib/stores/auth';
   import { apiFetch } from '$lib/api';
   import { permisos } from '$lib/stores/permisos';
 
-  let toasts: { id: number; msg: string; type: 'success' | 'error' }[] = [];
   let sidebarOpen = false;
 
   function toggleSidebar() { sidebarOpen = !sidebarOpen; }
@@ -50,7 +50,8 @@
     </div>
   </div>
 
-  <Toast {toasts} />
+  <Toast />
+  <ConfirmModal />
 {/if}
 
 <style>
