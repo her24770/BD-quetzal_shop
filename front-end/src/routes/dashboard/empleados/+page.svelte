@@ -2,116 +2,78 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import DataTable from '$lib/components/DataTable.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
-  import { requirePermiso } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosEmpleados } from '$lib/stores/filtros';
+  import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
-
-  interface Empleado {
-    id: number; usuario_id: number; dpi: string; nombre: string;
-    telefono: string; cargo: string; fecha_contrato: string;
-    estado: string; email: string; rol_nombre: string;
-  }
+  import { formatFecha } from '$lib/utils';
+  import { type Empleado, type EmpleadoForm, empleadosApi } from '$lib/api/empleados';
 
   let empleados: Empleado[] = [];
-  let loading = true;
-  let errorMsg = '';
+  let loading   = true;
   let pageError = '';
-  let saving = false;
+  let errorMsg  = '';
+  let saving    = false;
   let modalOpen = false;
-
-  function emptyForm() {
-    return { nombre: '', email: '', password: '', dpi: '', telefono: '', cargo: '', fecha_contrato: '', rol_id: '2' };
-  }
   let form = emptyForm();
 
-  $: token   = $auth.token ?? '';
-  $: isAdmin = ($permisos['empleados'] ?? []).includes('INSERT');
+  function emptyForm(): EmpleadoForm {
+    return { nombre: '', email: '', password: '', dpi: '', telefono: '', cargo: '', fecha_contrato: '', rol_id: '2' };
+  }
+
+  $: token     = $auth.token ?? '';
+  $: canDelete = ($permisos['empleados'] ?? []).includes('DELETE');
+  $: canWrite  = ($permisos['empleados'] ?? []).includes('INSERT');
+
+  $: empleadosFiltrados = empleados.filter(e => {
+    const q   = $filtrosEmpleados.busqueda.toLowerCase();
+    const est = $filtrosEmpleados.estado;
+    return (!q || e.nombre.toLowerCase().includes(q)) && (est === 'todos' || e.estado === est);
+  });
+  $: hayFiltros = $filtrosEmpleados.busqueda !== '' || $filtrosEmpleados.estado !== 'todos';
 
   onMount(async () => {
     if (!requirePermiso('empleados')) return;
-    const r = await apiFetch('/empleados', token);
-    if (r.ok) empleados = await r.json();
-    else pageError = 'Error al cargar empleados';
-    loading = false;
+    try {
+      empleados = await empleadosApi.getAll(token);
+    } catch (e: any) {
+      pageError = e.message;
+    } finally {
+      loading = false;
+    }
   });
 
-  async function reload() {
-    const r = await apiFetch('/empleados', token);
-    if (r.ok) empleados = await r.json();
-  }
-
-  function openAdd() {
-    form = emptyForm();
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function closeModal() {
-    modalOpen = false;
-    form = emptyForm();
-    errorMsg = '';
-  }
+  function openAdd() { form = emptyForm(); errorMsg = ''; modalOpen = true; }
+  function closeModal() { modalOpen = false; form = emptyForm(); errorMsg = ''; }
 
   async function saveForm() {
     if (!form.nombre || !form.email || !form.password || !form.dpi || !form.telefono || !form.cargo || !form.fecha_contrato) {
-      errorMsg = 'Completa todos los campos obligatorios';
-      return;
+      errorMsg = 'Completa todos los campos obligatorios'; return;
     }
-    saving = true;
-    errorMsg = '';
-    const body = {
-      nombre:         form.nombre,
-      email:          form.email,
-      password:       form.password,
-      dpi:            form.dpi,
-      telefono:       form.telefono,
-      cargo:          form.cargo,
-      fecha_contrato: form.fecha_contrato,
-      rol_id:         parseInt(form.rol_id),
-    };
+    saving = true; errorMsg = '';
     try {
-      const res = await apiFetch('/empleados', token, { method: 'POST', body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        errorMsg = e.detail ?? 'Error al guardar';
-      } else {
-        await reload();
-        closeModal();
-      }
+      await empleadosApi.create(token, form);
+      empleados = await empleadosApi.getAll(token);
+      closeModal();
+    } catch (e: any) {
+      errorMsg = e.message;
     } finally {
       saving = false;
     }
   }
 
-  $: empleadosFiltrados = empleados.filter(e => {
-    const q   = $filtrosEmpleados.busqueda.toLowerCase();
-    const est = $filtrosEmpleados.estado;
-    const matchBusqueda = !q || e.nombre.toLowerCase().includes(q);
-    const matchEstado   = est === 'todos' || e.estado === est;
-    return matchBusqueda && matchEstado;
-  });
-  $: hayFiltros = $filtrosEmpleados.busqueda !== '' || $filtrosEmpleados.estado !== 'todos';
-
-  function onBusqueda(e: Event) { filtrosEmpleados.set({ busqueda: (e.target as HTMLInputElement).value }); }
-  function onEstado(e: Event)   { filtrosEmpleados.set({ estado: (e.target as HTMLSelectElement).value }); }
-
   async function deleteItem(id: number) {
     pageError = '';
-    const res = await apiFetch(`/empleados/${id}`, token, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      await empleadosApi.delete(token, id);
       empleados = empleados.filter(e => e.id !== id);
-    } else {
-      const e = await res.json().catch(() => ({}));
-      pageError = e.detail ?? 'Error al eliminar';
+    } catch (e: any) {
+      pageError = e.message;
     }
-  }
-
-  function formatFecha(f: string) {
-    return f ? new Date(f).toLocaleDateString('es-GT') : '—';
   }
 
   function exportarCSV() {
@@ -125,46 +87,37 @@
 <svelte:head><title>Empleados — QuetzalShop</title></svelte:head>
 
 <Modal open={modalOpen} title="Nuevo empleado" on:close={closeModal}>
-  {#if errorMsg}
-    <div class="form-error">{errorMsg}</div>
-  {/if}
+  {#if errorMsg}<div class="form-error">{errorMsg}</div>{/if}
 
   <div class="form-grid">
     <div class="qz-field span-2">
       <label class="qz-label" for="em-nombre">Nombre completo *</label>
       <input id="em-nombre" class="qz-input" bind:value={form.nombre} placeholder="Nombre del empleado" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-email">Email *</label>
       <input id="em-email" type="email" class="qz-input" bind:value={form.email} placeholder="correo@ejemplo.com" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-password">Contraseña *</label>
       <input id="em-password" type="password" class="qz-input" bind:value={form.password} placeholder="Mínimo 6 caracteres" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-dpi">DPI *</label>
       <input id="em-dpi" class="qz-input" bind:value={form.dpi} placeholder="1234567890101" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-tel">Teléfono *</label>
       <input id="em-tel" class="qz-input" bind:value={form.telefono} placeholder="5555-1234" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-cargo">Cargo *</label>
       <input id="em-cargo" class="qz-input" bind:value={form.cargo} placeholder="Ej: Cajero, Bodeguero" />
     </div>
-
     <div class="qz-field">
       <label class="qz-label" for="em-contrato">Fecha de contrato *</label>
       <input id="em-contrato" type="date" class="qz-input" bind:value={form.fecha_contrato} />
     </div>
-
     <div class="qz-field span-2">
       <label class="qz-label" for="em-rol">Rol *</label>
       <select id="em-rol" class="qz-input" bind:value={form.rol_id}>
@@ -186,7 +139,7 @@
 <div class="section-header">
   <h2 class="page-title">Empleados</h2>
   <div class="header-actions">
-    {#if isAdmin}
+    {#if canWrite}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo empleado
       </button>
@@ -197,72 +150,53 @@
   </div>
 </div>
 
-{#if pageError}
-  <div class="page-error">{pageError}</div>
-{/if}
+{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
-<div class="filtros-bar">
-  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
-    value={$filtrosEmpleados.busqueda} on:input={onBusqueda} />
-  <select class="qz-input filtro-select" value={$filtrosEmpleados.estado} on:change={onEstado}>
+<FilterBar
+  value={$filtrosEmpleados.busqueda}
+  placeholder="Buscar por nombre…"
+  total={empleados.length}
+  filtered={empleadosFiltrados.length}
+  hasActive={hayFiltros}
+  on:search={e => filtrosEmpleados.set({ busqueda: e.detail })}
+  on:clear={() => filtrosEmpleados.reset()}
+>
+  <select class="qz-input filtro-select" value={$filtrosEmpleados.estado}
+    on:change={e => filtrosEmpleados.set({ estado: e.currentTarget.value })}>
     <option value="todos">Todos los estados</option>
     <option value="activo">Activo</option>
     <option value="inactivo">Inactivo</option>
   </select>
-  {#if hayFiltros}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosEmpleados.reset()}>Limpiar</button>
-  {/if}
-  <span class="filtro-count">{empleadosFiltrados.length} de {empleados.length}</span>
-</div>
+</FilterBar>
 
 {#if loading}
   <div class="loading-msg">Cargando empleados…</div>
 {:else}
-  <div class="qz-table-wrap">
-    <table class="qz-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>DPI</th>
-          <th>Cargo</th>
-          <th>Teléfono</th>
-          <th>Email</th>
-          <th>Rol</th>
-          <th>Contrato</th>
-          <th>Estado</th>
-          {#if isAdmin}<th>Acciones</th>{/if}
-        </tr>
-      </thead>
-      <tbody>
-        {#if empleadosFiltrados.length === 0}
-          <tr class="empty-row"><td colspan="9">{hayFiltros ? 'Sin coincidencias' : 'Sin empleados registrados'}</td></tr>
-        {:else}
-          {#each empleadosFiltrados as e}
-            <tr>
-              <td><span class="cell-main">{e.nombre}</span></td>
-              <td><span class="cell-mono">{e.dpi}</span></td>
-              <td>{e.cargo}</td>
-              <td>{e.telefono}</td>
-              <td><span class="cell-sub">{e.email}</span></td>
-              <td>{e.rol_nombre}</td>
-              <td>{formatFecha(e.fecha_contrato)}</td>
-              <td>
-                <span class="badge" class:badge-green={e.estado === 'activo'} class:badge-gray={e.estado !== 'activo'}>
-                  {e.estado}
-                </span>
-              </td>
-              {#if isAdmin}
-                <td>
-                  <button class="btn btn-sm btn-danger" on:click={() => deleteItem(e.id)}>
-                    <Icon path={IC.trash} size={11} /> Eliminar
-                  </button>
-                </td>
-              {/if}
-            </tr>
-          {/each}
-        {/if}
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    rows={empleadosFiltrados}
+    canWrite={false}
+    {canDelete}
+    colspan={8}
+    emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin empleados registrados'}
+    on:delete={e => deleteItem(e.detail)}
+  >
+    <svelte:fragment slot="headers">
+      <th>Nombre</th><th>DPI</th><th>Cargo</th><th>Teléfono</th>
+      <th>Email</th><th>Rol</th><th>Contrato</th><th>Estado</th>
+    </svelte:fragment>
+    <svelte:fragment slot="row" let:row>
+      <td><span class="cell-main">{row.nombre}</span></td>
+      <td><span class="cell-mono">{row.dpi}</span></td>
+      <td>{row.cargo}</td>
+      <td>{row.telefono}</td>
+      <td><span class="cell-sub">{row.email}</span></td>
+      <td>{row.rol_nombre}</td>
+      <td>{formatFecha(row.fecha_contrato)}</td>
+      <td>
+        <span class="badge" class:badge-green={row.estado === 'activo'} class:badge-gray={row.estado !== 'activo'}>
+          {row.estado}
+        </span>
+      </td>
+    </svelte:fragment>
+  </DataTable>
 {/if}
-

@@ -2,85 +2,31 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import DataTable from '$lib/components/DataTable.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
   import { filtrosCategorias } from '$lib/stores/filtros';
   import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
-
-  interface Categoria { id: number; nombre: string; descripcion: string; }
+  import { type Categoria, type CategoriaForm, categoriasApi } from '$lib/api/categorias';
 
   let categorias: Categoria[] = [];
-  let loading = true;
-  let errorMsg = '';
+  let loading   = true;
   let pageError = '';
-  let saving = false;
+  let errorMsg  = '';
+  let saving    = false;
   let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
   let form = emptyForm();
 
-  function emptyForm() { return { id: 0, nombre: '', descripcion: '' }; }
+  function emptyForm(): CategoriaForm & { id: number } { return { id: 0, nombre: '', descripcion: '' }; }
 
-  $: token   = $auth.token ?? '';
-  $: isAdmin = ($permisos['categorias'] ?? []).includes('INSERT');
-
-  onMount(async () => {
-    if (!requirePermiso('categorias')) return;
-    const r = await apiFetch('/categorias', token);
-    if (r.ok) categorias = await r.json();
-    else pageError = 'Error al cargar categorías';
-    loading = false;
-  });
-
-  async function reload() {
-    const r = await apiFetch('/categorias', token);
-    if (r.ok) categorias = await r.json();
-  }
-
-  function openAdd() {
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function startEdit(c: Categoria) {
-    form = { id: c.id, nombre: c.nombre, descripcion: c.descripcion };
-    mode = 'edit';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function closeModal() {
-    modalOpen = false;
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-  }
-
-  async function saveForm() {
-    if (!form.nombre) { errorMsg = 'El nombre es requerido'; return; }
-    saving = true;
-    errorMsg = '';
-    const body = { nombre: form.nombre, descripcion: form.descripcion };
-    try {
-      const res = mode === 'edit'
-        ? await apiFetch(`/categorias/${form.id}`, token, { method: 'PATCH', body: JSON.stringify(body) })
-        : await apiFetch('/categorias',            token, { method: 'POST',  body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        errorMsg = e.detail ?? 'Error al guardar';
-      } else {
-        await reload();
-        closeModal();
-      }
-    } finally {
-      saving = false;
-    }
-  }
+  $: token     = $auth.token ?? '';
+  $: canWrite  = ($permisos['categorias'] ?? []).includes('INSERT');
+  $: canDelete = ($permisos['categorias'] ?? []).includes('DELETE');
 
   $: categoriasFiltradas = categorias.filter(c => {
     const q = $filtrosCategorias.busqueda.toLowerCase();
@@ -88,16 +34,51 @@
   });
   $: hayFiltros = $filtrosCategorias.busqueda !== '';
 
-  function onBusqueda(e: Event) { filtrosCategorias.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  onMount(async () => {
+    if (!requirePermiso('categorias')) return;
+    try {
+      categorias = await categoriasApi.getAll(token);
+    } catch (e: any) {
+      pageError = e.message;
+    } finally {
+      loading = false;
+    }
+  });
+
+  function openAdd() { form = emptyForm(); mode = 'add'; errorMsg = ''; modalOpen = true; }
+
+  function startEdit(c: Categoria) {
+    form = { id: c.id, nombre: c.nombre, descripcion: c.descripcion };
+    mode = 'edit'; errorMsg = ''; modalOpen = true;
+  }
+
+  function closeModal() { modalOpen = false; form = emptyForm(); mode = 'add'; errorMsg = ''; }
+
+  async function saveForm() {
+    if (!form.nombre) { errorMsg = 'El nombre es requerido'; return; }
+    saving = true; errorMsg = '';
+    try {
+      if (mode === 'edit') {
+        await categoriasApi.update(token, form.id, { nombre: form.nombre, descripcion: form.descripcion });
+      } else {
+        await categoriasApi.create(token, { nombre: form.nombre, descripcion: form.descripcion });
+      }
+      categorias = await categoriasApi.getAll(token);
+      closeModal();
+    } catch (e: any) {
+      errorMsg = e.message;
+    } finally {
+      saving = false;
+    }
+  }
 
   async function deleteItem(id: number) {
     pageError = '';
-    const res = await apiFetch(`/categorias/${id}`, token, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      await categoriasApi.delete(token, id);
       categorias = categorias.filter(c => c.id !== id);
-    } else {
-      const e = await res.json().catch(() => ({}));
-      pageError = e.detail ?? 'Error al eliminar';
+    } catch (e: any) {
+      pageError = e.message;
     }
   }
 </script>
@@ -105,9 +86,7 @@
 <svelte:head><title>Categorías — QuetzalShop</title></svelte:head>
 
 <Modal open={modalOpen} title={mode === 'add' ? 'Nueva categoría' : 'Editar categoría'} on:close={closeModal}>
-  {#if errorMsg}
-    <div class="form-error">{errorMsg}</div>
-  {/if}
+  {#if errorMsg}<div class="form-error">{errorMsg}</div>{/if}
 
   <div class="form-grid">
     <div class="qz-field">
@@ -136,62 +115,44 @@
 
 <div class="section-header">
   <h2 class="page-title">Categorías</h2>
-  {#if isAdmin}
+  {#if canWrite}
     <button class="btn btn-md btn-purple" on:click={openAdd}>
       <Icon path={IC.plus} size={13} /> Nueva categoría
     </button>
   {/if}
 </div>
 
-{#if pageError}
-  <div class="page-error">{pageError}</div>
-{/if}
+{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
-<div class="filtros-bar">
-  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre…"
-    value={$filtrosCategorias.busqueda} on:input={onBusqueda} />
-  {#if hayFiltros}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosCategorias.reset()}>Limpiar</button>
-  {/if}
-  <span class="filtro-count">{categoriasFiltradas.length} de {categorias.length}</span>
-</div>
+<FilterBar
+  value={$filtrosCategorias.busqueda}
+  placeholder="Buscar por nombre…"
+  total={categorias.length}
+  filtered={categoriasFiltradas.length}
+  hasActive={hayFiltros}
+  on:search={e => filtrosCategorias.set({ busqueda: e.detail })}
+  on:clear={() => filtrosCategorias.reset()}
+/>
 
 {#if loading}
   <div class="loading-msg">Cargando categorías…</div>
 {:else}
-  <div class="qz-table-wrap">
-    <table class="qz-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Descripción</th>
-          {#if isAdmin}<th>Acciones</th>{/if}
-        </tr>
-      </thead>
-      <tbody>
-        {#if categoriasFiltradas.length === 0}
-          <tr class="empty-row"><td colspan={isAdmin ? 3 : 2}>{hayFiltros ? 'Sin coincidencias' : 'Sin categorías registradas'}</td></tr>
-        {:else}
-          {#each categoriasFiltradas as c}
-            <tr>
-              <td><span class="cell-main">{c.nombre}</span></td>
-              <td><span class="cell-sub">{c.descripcion}</span></td>
-              {#if isAdmin}
-                <td>
-                  <div class="row-actions">
-                    <button class="btn btn-sm btn-blue" on:click={() => startEdit(c)}>
-                      <Icon path={IC.edit} size={11} /> Editar
-                    </button>
-                    <button class="btn btn-sm btn-danger" on:click={() => deleteItem(c.id)}>
-                      <Icon path={IC.trash} size={11} /> Eliminar
-                    </button>
-                  </div>
-                </td>
-              {/if}
-            </tr>
-          {/each}
-        {/if}
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    rows={categoriasFiltradas}
+    {canWrite}
+    {canDelete}
+    colspan={2}
+    emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin categorías registradas'}
+    on:edit={e => startEdit(e.detail)}
+    on:delete={e => deleteItem(e.detail)}
+  >
+    <svelte:fragment slot="headers">
+      <th>Nombre</th>
+      <th>Descripción</th>
+    </svelte:fragment>
+    <svelte:fragment slot="row" let:row>
+      <td><span class="cell-main">{row.nombre}</span></td>
+      <td><span class="cell-sub">{row.descripcion}</span></td>
+    </svelte:fragment>
+  </DataTable>
 {/if}

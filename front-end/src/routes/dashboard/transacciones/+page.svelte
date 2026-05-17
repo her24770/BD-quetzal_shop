@@ -3,14 +3,13 @@
   import Icon from '$lib/components/Icon.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
   import { requirePermisoAny } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
-
-  interface Producto   { id: number; nombre: string; stock: number; precio: number; }
-  interface Cliente    { id: number; nombre: string; nit: string; }
-  interface Proveedor  { id: number; nombre: string; }
-  interface MetodoPago { id: number; metodo: string; }
+  import { type Producto, productosApi } from '$lib/api/productos';
+  import { type Cliente, clientesApi } from '$lib/api/clientes';
+  import { type Proveedor, proveedoresApi } from '$lib/api/proveedores';
+  import { type MetodoPago, ventasApi } from '$lib/api/ventas';
+  import { comprasApi } from '$lib/api/compras';
 
   let productos:   Producto[]   = [];
   let clientes:    Cliente[]    = [];
@@ -42,22 +41,18 @@
       vError = 'Completa todos los campos y agrega al menos un producto'; return;
     }
     vSaving = true; vError = '';
-    const body = {
-      cliente_id:     parseInt(vForm.cliente_id),
-      metodo_pago_id: parseInt(vForm.metodo_pago_id),
-      descuento:      parseFloat(vForm.descuento) || 0,
-      items: vItems.map(i => ({ producto_id: parseInt(i.producto_id), cantidad: parseInt(i.cantidad) })),
-    };
     try {
-      const res = await apiFetch('/ventas', token, { method: 'POST', body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        vError = e.detail ?? 'Error al registrar la venta';
-      } else {
-        vForm = { cliente_id: String(clientes[0]?.id ?? ''), metodo_pago_id: String(metodos[0]?.id ?? ''), descuento: '0' };
-        vItems = [{ producto_id: String(productos[0]?.id ?? ''), cantidad: '' }];
-        await reloadProductos();
-      }
+      await ventasApi.create(token, {
+        cliente_id:     parseInt(vForm.cliente_id),
+        metodo_pago_id: parseInt(vForm.metodo_pago_id),
+        descuento:      parseFloat(vForm.descuento) || 0,
+        items: vItems.map(i => ({ producto_id: parseInt(i.producto_id), cantidad: parseInt(i.cantidad) })),
+      });
+      vForm  = { cliente_id: String(clientes[0]?.id ?? ''), metodo_pago_id: String(metodos[0]?.id ?? ''), descuento: '0' };
+      vItems = [{ producto_id: String(productos[0]?.id ?? ''), cantidad: '' }];
+      await reloadProductos();
+    } catch (e: any) {
+      vError = e.message;
     } finally { vSaving = false; }
   }
 
@@ -80,52 +75,45 @@
       cError = 'Completa todos los campos y agrega al menos un producto'; return;
     }
     cSaving = true; cError = '';
-    const body = {
-      numero_factura: cForm.numero_factura,
-      items: cItems.map(i => ({
-        producto_id:  parseInt(i.producto_id),
-        proveedor_id: parseInt(i.proveedor_id),
-        cantidad:     parseInt(i.cantidad),
-        precio_costo: parseFloat(i.precio_costo),
-      })),
-    };
     try {
-      const res = await apiFetch('/compras', token, { method: 'POST', body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        cError = e.detail ?? 'Error al registrar la compra';
-      } else {
-        cForm = { numero_factura: '' };
-        cItems = [{ producto_id: String(productos[0]?.id ?? ''), proveedor_id: String(proveedores[0]?.id ?? ''), cantidad: '', precio_costo: '' }];
-        await reloadProductos();
-      }
+      await comprasApi.create(token, {
+        numero_factura: cForm.numero_factura,
+        items: cItems.map(i => ({
+          producto_id:  parseInt(i.producto_id),
+          proveedor_id: parseInt(i.proveedor_id),
+          cantidad:     parseInt(i.cantidad),
+          precio_costo: parseFloat(i.precio_costo),
+        })),
+      });
+      cForm  = { numero_factura: '' };
+      cItems = [{ producto_id: String(productos[0]?.id ?? ''), proveedor_id: String(proveedores[0]?.id ?? ''), cantidad: '', precio_costo: '' }];
+      await reloadProductos();
+    } catch (e: any) {
+      cError = e.message;
     } finally { cSaving = false; }
   }
 
   async function reloadProductos() {
-    const r = await apiFetch('/productos', token);
-    if (r.ok) productos = await r.json();
+    productos = await productosApi.getAll(token);
   }
 
   onMount(async () => {
     if (!requirePermisoAny([['ventas', 'INSERT'], ['compras', 'INSERT']])) return;
-    const calls: Promise<any>[] = [reloadProductos()];
+    const calls: Promise<void>[] = [reloadProductos()];
     if (canVentas) {
       calls.push(
-        apiFetch('/clientes', token).then(r => r.ok && r.json().then((d: Cliente[]) => clientes = d)),
-        apiFetch('/ventas/metodos-pago', token).then(r => r.ok && r.json().then((d: MetodoPago[]) => metodos = d)),
+        clientesApi.getAll(token).then(d => { clientes = d; }),
+        ventasApi.getMetodos(token).then(d => { metodos = d; }),
       );
     }
     if (canCompras) {
-      calls.push(
-        apiFetch('/proveedores', token).then(r => r.ok && r.json().then((d: Proveedor[]) => proveedores = d)),
-      );
+      calls.push(proveedoresApi.getAll(token).then(d => { proveedores = d; }));
     }
     await Promise.all(calls);
 
-    if (clientes.length)    vForm.cliente_id      = String(clientes[0].id);
-    if (metodos.length)     vForm.metodo_pago_id  = String(metodos[0].id);
-    if (productos.length)   vItems[0].producto_id = String(productos[0].id);
+    if (clientes.length)    vForm.cliente_id       = String(clientes[0].id);
+    if (metodos.length)     vForm.metodo_pago_id   = String(metodos[0].id);
+    if (productos.length)   vItems[0].producto_id  = String(productos[0].id);
     if (proveedores.length) cItems[0].proveedor_id = String(proveedores[0].id);
 
     loading = false;

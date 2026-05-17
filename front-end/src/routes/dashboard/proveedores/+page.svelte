@@ -2,86 +2,32 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import DataTable from '$lib/components/DataTable.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
   import { exportCsv } from '$lib/csv';
   import { filtrosProveedores } from '$lib/stores/filtros';
   import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
-
-  interface Proveedor { id: number; nombre: string; telefono: string; email: string; direccion: string; }
+  import { type Proveedor, type ProveedorForm, proveedoresApi } from '$lib/api/proveedores';
 
   let proveedores: Proveedor[] = [];
-  let loading = true;
-  let errorMsg = '';
+  let loading   = true;
   let pageError = '';
-  let saving = false;
+  let errorMsg  = '';
+  let saving    = false;
   let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
   let form = emptyForm();
 
-  function emptyForm() { return { id: 0, nombre: '', telefono: '', email: '', direccion: '' }; }
+  function emptyForm(): ProveedorForm & { id: number } { return { id: 0, nombre: '', telefono: '', email: '', direccion: '' }; }
 
-  $: token    = $auth.token ?? '';
-  $: canEdit  = ($permisos['proveedores'] ?? []).includes('INSERT');
-
-  onMount(async () => {
-    if (!requirePermiso('proveedores')) return;
-    const r = await apiFetch('/proveedores', token);
-    if (r.ok) proveedores = await r.json();
-    else pageError = 'Error al cargar proveedores';
-    loading = false;
-  });
-
-  async function reload() {
-    const r = await apiFetch('/proveedores', token);
-    if (r.ok) proveedores = await r.json();
-  }
-
-  function openAdd() {
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function startEdit(p: Proveedor) {
-    form = { id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email, direccion: p.direccion };
-    mode = 'edit';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function closeModal() {
-    modalOpen = false;
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-  }
-
-  async function saveForm() {
-    if (!form.nombre || !form.telefono || !form.email) { errorMsg = 'Completa los campos obligatorios'; return; }
-    saving = true;
-    errorMsg = '';
-    const body = { nombre: form.nombre, telefono: form.telefono, email: form.email, direccion: form.direccion };
-    try {
-      const res = mode === 'edit'
-        ? await apiFetch(`/proveedores/${form.id}`, token, { method: 'PATCH', body: JSON.stringify(body) })
-        : await apiFetch('/proveedores',            token, { method: 'POST',  body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        errorMsg = e.detail ?? 'Error al guardar';
-      } else {
-        await reload();
-        closeModal();
-      }
-    } finally {
-      saving = false;
-    }
-  }
+  $: token     = $auth.token ?? '';
+  $: canWrite  = ($permisos['proveedores'] ?? []).includes('INSERT');
+  $: canDelete = ($permisos['proveedores'] ?? []).includes('DELETE');
 
   $: proveedoresFiltrados = proveedores.filter(p => {
     const q = $filtrosProveedores.busqueda.toLowerCase();
@@ -89,7 +35,53 @@
   });
   $: hayFiltros = $filtrosProveedores.busqueda !== '';
 
-  function onBusqueda(e: Event) { filtrosProveedores.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  onMount(async () => {
+    if (!requirePermiso('proveedores')) return;
+    try {
+      proveedores = await proveedoresApi.getAll(token);
+    } catch (e: any) {
+      pageError = e.message;
+    } finally {
+      loading = false;
+    }
+  });
+
+  function openAdd() { form = emptyForm(); mode = 'add'; errorMsg = ''; modalOpen = true; }
+
+  function startEdit(p: Proveedor) {
+    form = { id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email, direccion: p.direccion };
+    mode = 'edit'; errorMsg = ''; modalOpen = true;
+  }
+
+  function closeModal() { modalOpen = false; form = emptyForm(); mode = 'add'; errorMsg = ''; }
+
+  async function saveForm() {
+    if (!form.nombre || !form.telefono || !form.email) { errorMsg = 'Completa los campos obligatorios'; return; }
+    saving = true; errorMsg = '';
+    try {
+      if (mode === 'edit') {
+        await proveedoresApi.update(token, form.id, { nombre: form.nombre, telefono: form.telefono, email: form.email, direccion: form.direccion });
+      } else {
+        await proveedoresApi.create(token, { nombre: form.nombre, telefono: form.telefono, email: form.email, direccion: form.direccion });
+      }
+      proveedores = await proveedoresApi.getAll(token);
+      closeModal();
+    } catch (e: any) {
+      errorMsg = e.message;
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function deleteItem(id: number) {
+    pageError = '';
+    try {
+      await proveedoresApi.delete(token, id);
+      proveedores = proveedores.filter(p => p.id !== id);
+    } catch (e: any) {
+      pageError = e.message;
+    }
+  }
 
   function exportarCSV() {
     exportCsv('proveedores.csv',
@@ -97,25 +89,12 @@
       proveedoresFiltrados.map(p => [p.id, p.nombre, p.telefono, p.email, p.direccion])
     );
   }
-
-  async function deleteItem(id: number) {
-    pageError = '';
-    const res = await apiFetch(`/proveedores/${id}`, token, { method: 'DELETE' });
-    if (res.ok) {
-      proveedores = proveedores.filter(p => p.id !== id);
-    } else {
-      const e = await res.json().catch(() => ({}));
-      pageError = e.detail ?? 'Error al eliminar';
-    }
-  }
 </script>
 
 <svelte:head><title>Proveedores — QuetzalShop</title></svelte:head>
 
 <Modal open={modalOpen} title={mode === 'add' ? 'Nuevo proveedor' : 'Editar proveedor'} on:close={closeModal}>
-  {#if errorMsg}
-    <div class="form-error">{errorMsg}</div>
-  {/if}
+  {#if errorMsg}<div class="form-error">{errorMsg}</div>{/if}
 
   <div class="form-grid">
     <div class="qz-field">
@@ -153,7 +132,7 @@
 <div class="section-header">
   <h2 class="page-title">Proveedores</h2>
   <div class="header-actions">
-    {#if canEdit}
+    {#if canWrite}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo proveedor
       </button>
@@ -164,60 +143,38 @@
   </div>
 </div>
 
-{#if pageError}
-  <div class="page-error">{pageError}</div>
-{/if}
+{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
-<div class="filtros-bar">
-  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre o email…"
-    value={$filtrosProveedores.busqueda} on:input={onBusqueda} />
-  {#if hayFiltros}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosProveedores.reset()}>Limpiar</button>
-  {/if}
-  <span class="filtro-count">{proveedoresFiltrados.length} de {proveedores.length}</span>
-</div>
+<FilterBar
+  value={$filtrosProveedores.busqueda}
+  placeholder="Buscar por nombre o email…"
+  total={proveedores.length}
+  filtered={proveedoresFiltrados.length}
+  hasActive={hayFiltros}
+  on:search={e => filtrosProveedores.set({ busqueda: e.detail })}
+  on:clear={() => filtrosProveedores.reset()}
+/>
 
 {#if loading}
   <div class="loading-msg">Cargando proveedores…</div>
 {:else}
-  <div class="qz-table-wrap">
-    <table class="qz-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Teléfono</th>
-          <th>Email</th>
-          <th>Dirección</th>
-          {#if canEdit}<th>Acciones</th>{/if}
-        </tr>
-      </thead>
-      <tbody>
-        {#if proveedoresFiltrados.length === 0}
-          <tr class="empty-row"><td colspan={canEdit ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}</td></tr>
-        {:else}
-          {#each proveedoresFiltrados as p}
-            <tr>
-              <td><span class="cell-main">{p.nombre}</span></td>
-              <td>{p.telefono}</td>
-              <td><span class="cell-sub">{p.email}</span></td>
-              <td><span class="cell-sub">{p.direccion}</span></td>
-              {#if canEdit}
-                <td>
-                  <div class="row-actions">
-                    <button class="btn btn-sm btn-blue" on:click={() => startEdit(p)}>
-                      <Icon path={IC.edit} size={11} /> Editar
-                    </button>
-                    <button class="btn btn-sm btn-danger" on:click={() => deleteItem(p.id)}>
-                      <Icon path={IC.trash} size={11} /> Eliminar
-                    </button>
-                  </div>
-                </td>
-              {/if}
-            </tr>
-          {/each}
-        {/if}
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    rows={proveedoresFiltrados}
+    {canWrite}
+    {canDelete}
+    colspan={4}
+    emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin proveedores registrados'}
+    on:edit={e => startEdit(e.detail)}
+    on:delete={e => deleteItem(e.detail)}
+  >
+    <svelte:fragment slot="headers">
+      <th>Nombre</th><th>Teléfono</th><th>Email</th><th>Dirección</th>
+    </svelte:fragment>
+    <svelte:fragment slot="row" let:row>
+      <td><span class="cell-main">{row.nombre}</span></td>
+      <td>{row.telefono}</td>
+      <td><span class="cell-sub">{row.email}</span></td>
+      <td><span class="cell-sub">{row.direccion}</span></td>
+    </svelte:fragment>
+  </DataTable>
 {/if}
-

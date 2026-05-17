@@ -2,86 +2,32 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import DataTable from '$lib/components/DataTable.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
-  import { requirePermiso } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosClientes } from '$lib/stores/filtros';
+  import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
-
-  interface Cliente { id: number; nombre: string; nit: string; telefono: string; direccion: string; }
+  import { type Cliente, type ClienteForm, clientesApi } from '$lib/api/clientes';
 
   let clientes: Cliente[] = [];
-  let loading = true;
-  let errorMsg = '';
+  let loading   = true;
   let pageError = '';
-  let saving = false;
+  let errorMsg  = '';
+  let saving    = false;
   let modalOpen = false;
 
   type Mode = 'add' | 'edit';
   let mode: Mode = 'add';
   let form = emptyForm();
 
-  function emptyForm() { return { id: 0, nombre: '', nit: '', telefono: '', direccion: '' }; }
+  function emptyForm(): ClienteForm & { id: number } { return { id: 0, nombre: '', nit: '', telefono: '', direccion: '' }; }
 
-  $: token    = $auth.token ?? '';
-  $: canEdit  = ($permisos['clientes'] ?? []).includes('INSERT');
-
-  onMount(async () => {
-    if (!requirePermiso('clientes')) return;
-    const r = await apiFetch('/clientes', token);
-    if (r.ok) clientes = await r.json();
-    else pageError = 'Error al cargar clientes';
-    loading = false;
-  });
-
-  async function reload() {
-    const r = await apiFetch('/clientes', token);
-    if (r.ok) clientes = await r.json();
-  }
-
-  function openAdd() {
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function startEdit(c: Cliente) {
-    form = { id: c.id, nombre: c.nombre, nit: c.nit, telefono: c.telefono, direccion: c.direccion };
-    mode = 'edit';
-    errorMsg = '';
-    modalOpen = true;
-  }
-
-  function closeModal() {
-    modalOpen = false;
-    form = emptyForm();
-    mode = 'add';
-    errorMsg = '';
-  }
-
-  async function saveForm() {
-    if (!form.nombre || !form.nit) { errorMsg = 'Nombre y NIT son requeridos'; return; }
-    saving = true;
-    errorMsg = '';
-    const body = { nombre: form.nombre, nit: form.nit, telefono: form.telefono, direccion: form.direccion };
-    try {
-      const res = mode === 'edit'
-        ? await apiFetch(`/clientes/${form.id}`, token, { method: 'PATCH', body: JSON.stringify(body) })
-        : await apiFetch('/clientes',            token, { method: 'POST',  body: JSON.stringify(body) });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        errorMsg = e.detail ?? 'Error al guardar';
-      } else {
-        await reload();
-        closeModal();
-      }
-    } finally {
-      saving = false;
-    }
-  }
+  $: token     = $auth.token ?? '';
+  $: canWrite  = ($permisos['clientes'] ?? []).includes('INSERT');
+  $: canDelete = ($permisos['clientes'] ?? []).includes('DELETE');
 
   $: clientesFiltrados = clientes.filter(c => {
     const q = $filtrosClientes.busqueda.toLowerCase();
@@ -89,7 +35,53 @@
   });
   $: hayFiltros = $filtrosClientes.busqueda !== '';
 
-  function onBusqueda(e: Event) { filtrosClientes.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  onMount(async () => {
+    if (!requirePermiso('clientes')) return;
+    try {
+      clientes = await clientesApi.getAll(token);
+    } catch (e: any) {
+      pageError = e.message;
+    } finally {
+      loading = false;
+    }
+  });
+
+  function openAdd() { form = emptyForm(); mode = 'add'; errorMsg = ''; modalOpen = true; }
+
+  function startEdit(c: Cliente) {
+    form = { id: c.id, nombre: c.nombre, nit: c.nit, telefono: c.telefono, direccion: c.direccion };
+    mode = 'edit'; errorMsg = ''; modalOpen = true;
+  }
+
+  function closeModal() { modalOpen = false; form = emptyForm(); mode = 'add'; errorMsg = ''; }
+
+  async function saveForm() {
+    if (!form.nombre || !form.nit) { errorMsg = 'Nombre y NIT son requeridos'; return; }
+    saving = true; errorMsg = '';
+    try {
+      if (mode === 'edit') {
+        await clientesApi.update(token, form.id, { nombre: form.nombre, nit: form.nit, telefono: form.telefono, direccion: form.direccion });
+      } else {
+        await clientesApi.create(token, { nombre: form.nombre, nit: form.nit, telefono: form.telefono, direccion: form.direccion });
+      }
+      clientes = await clientesApi.getAll(token);
+      closeModal();
+    } catch (e: any) {
+      errorMsg = e.message;
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function deleteItem(id: number) {
+    pageError = '';
+    try {
+      await clientesApi.delete(token, id);
+      clientes = clientes.filter(c => c.id !== id);
+    } catch (e: any) {
+      pageError = e.message;
+    }
+  }
 
   function exportarCSV() {
     exportCsv('clientes.csv',
@@ -97,25 +89,12 @@
       clientesFiltrados.map(c => [c.id, c.nombre, c.nit, c.telefono, c.direccion])
     );
   }
-
-  async function deleteItem(id: number) {
-    pageError = '';
-    const res = await apiFetch(`/clientes/${id}`, token, { method: 'DELETE' });
-    if (res.ok) {
-      clientes = clientes.filter(c => c.id !== id);
-    } else {
-      const e = await res.json().catch(() => ({}));
-      pageError = e.detail ?? 'Error al eliminar';
-    }
-  }
 </script>
 
 <svelte:head><title>Clientes — QuetzalShop</title></svelte:head>
 
 <Modal open={modalOpen} title={mode === 'add' ? 'Nuevo cliente' : 'Editar cliente'} on:close={closeModal}>
-  {#if errorMsg}
-    <div class="form-error">{errorMsg}</div>
-  {/if}
+  {#if errorMsg}<div class="form-error">{errorMsg}</div>{/if}
 
   <div class="form-grid">
     <div class="qz-field">
@@ -153,7 +132,7 @@
 <div class="section-header">
   <h2 class="page-title">Clientes</h2>
   <div class="header-actions">
-    {#if canEdit}
+    {#if canWrite}
       <button class="btn btn-md btn-purple" on:click={openAdd}>
         <Icon path={IC.plus} size={13} /> Nuevo cliente
       </button>
@@ -164,60 +143,38 @@
   </div>
 </div>
 
-{#if pageError}
-  <div class="page-error">{pageError}</div>
-{/if}
+{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
-<div class="filtros-bar">
-  <input class="qz-input filtro-busqueda" placeholder="Buscar por nombre o NIT…"
-    value={$filtrosClientes.busqueda} on:input={onBusqueda} />
-  {#if hayFiltros}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosClientes.reset()}>Limpiar</button>
-  {/if}
-  <span class="filtro-count">{clientesFiltrados.length} de {clientes.length}</span>
-</div>
+<FilterBar
+  value={$filtrosClientes.busqueda}
+  placeholder="Buscar por nombre o NIT…"
+  total={clientes.length}
+  filtered={clientesFiltrados.length}
+  hasActive={hayFiltros}
+  on:search={e => filtrosClientes.set({ busqueda: e.detail })}
+  on:clear={() => filtrosClientes.reset()}
+/>
 
 {#if loading}
   <div class="loading-msg">Cargando clientes…</div>
 {:else}
-  <div class="qz-table-wrap">
-    <table class="qz-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>NIT</th>
-          <th>Teléfono</th>
-          <th>Dirección</th>
-          {#if canEdit}<th>Acciones</th>{/if}
-        </tr>
-      </thead>
-      <tbody>
-        {#if clientesFiltrados.length === 0}
-          <tr class="empty-row"><td colspan={canEdit ? 5 : 4}>{hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}</td></tr>
-        {:else}
-          {#each clientesFiltrados as c}
-            <tr>
-              <td><span class="cell-main">{c.nombre}</span></td>
-              <td><span class="cell-mono">{c.nit}</span></td>
-              <td>{c.telefono}</td>
-              <td><span class="cell-sub">{c.direccion}</span></td>
-              {#if canEdit}
-                <td>
-                  <div class="row-actions">
-                    <button class="btn btn-sm btn-blue" on:click={() => startEdit(c)}>
-                      <Icon path={IC.edit} size={11} /> Editar
-                    </button>
-                    <button class="btn btn-sm btn-danger" on:click={() => deleteItem(c.id)}>
-                      <Icon path={IC.trash} size={11} /> Eliminar
-                    </button>
-                  </div>
-                </td>
-              {/if}
-            </tr>
-          {/each}
-        {/if}
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    rows={clientesFiltrados}
+    {canWrite}
+    {canDelete}
+    colspan={4}
+    emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin clientes registrados'}
+    on:edit={e => startEdit(e.detail)}
+    on:delete={e => deleteItem(e.detail)}
+  >
+    <svelte:fragment slot="headers">
+      <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Dirección</th>
+    </svelte:fragment>
+    <svelte:fragment slot="row" let:row>
+      <td><span class="cell-main">{row.nombre}</span></td>
+      <td><span class="cell-mono">{row.nit}</span></td>
+      <td>{row.telefono}</td>
+      <td><span class="cell-sub">{row.direccion}</span></td>
+    </svelte:fragment>
+  </DataTable>
 {/if}
-

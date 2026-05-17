@@ -1,35 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import DataTable from '$lib/components/DataTable.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
   import { IC } from '$lib/icons';
   import { auth } from '$lib/stores/auth';
-  import { apiFetch } from '$lib/api';
-  import { requirePermiso } from '$lib/guards';
   import { exportCsv } from '$lib/csv';
   import { filtrosCompras } from '$lib/stores/filtros';
-
-  interface Compra {
-    id: number; fecha: string; total: number; numero_factura: string; empleado: string;
-  }
+  import { requirePermiso } from '$lib/guards';
+  import { formatCurrency, formatFecha } from '$lib/utils';
+  import { type Compra, comprasApi } from '$lib/api/compras';
 
   let compras: Compra[] = [];
-  let loading = true;
-  let errorMsg = '';
+  let loading   = true;
+  let pageError = '';
 
   $: token = $auth.token ?? '';
-
-  const fmt = (n: number) => 'Q ' + n.toLocaleString('es-GT', { minimumFractionDigits: 2 });
-  function formatFecha(f: string) {
-    return new Date(f).toLocaleDateString('es-GT', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
-  onMount(async () => {
-    if (!requirePermiso('compras')) return;
-    const r = await apiFetch('/compras', token);
-    if (r.ok) compras = await r.json();
-    else errorMsg = 'Error al cargar compras';
-    loading = false;
-  });
 
   $: comprasFiltradas = compras.filter(c => {
     const q = $filtrosCompras.busqueda.toLowerCase();
@@ -37,7 +23,16 @@
   });
   $: hayFiltros = $filtrosCompras.busqueda !== '';
 
-  function onBusqueda(e: Event) { filtrosCompras.set({ busqueda: (e.target as HTMLInputElement).value }); }
+  onMount(async () => {
+    if (!requirePermiso('compras')) return;
+    try {
+      compras = await comprasApi.getAll(token);
+    } catch (e: any) {
+      pageError = e.message;
+    } finally {
+      loading = false;
+    }
+  });
 
   function exportarCSV() {
     exportCsv('compras.csv',
@@ -56,48 +51,37 @@
   </button>
 </div>
 
-<div class="filtros-bar">
-  <input class="qz-input filtro-busqueda" placeholder="Buscar por factura o empleado…"
-    value={$filtrosCompras.busqueda} on:input={onBusqueda} />
-  {#if hayFiltros}
-    <button class="btn btn-sm btn-ghost" on:click={() => filtrosCompras.reset()}>Limpiar</button>
-  {/if}
-  <span class="filtro-count">{comprasFiltradas.length} de {compras.length}</span>
-</div>
+{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
-{#if errorMsg}
-  <div class="page-error">{errorMsg}</div>
-{/if}
+<FilterBar
+  value={$filtrosCompras.busqueda}
+  placeholder="Buscar por factura o empleado…"
+  total={compras.length}
+  filtered={comprasFiltradas.length}
+  hasActive={hayFiltros}
+  on:search={e => filtrosCompras.set({ busqueda: e.detail })}
+  on:clear={() => filtrosCompras.reset()}
+/>
 
 {#if loading}
   <div class="loading-msg">Cargando compras…</div>
 {:else}
-  <div class="qz-table-wrap">
-    <table class="qz-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Fecha</th>
-          <th>No. Factura</th>
-          <th>Empleado</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#if comprasFiltradas.length === 0}
-          <tr class="empty-row"><td colspan="5">{hayFiltros ? 'Sin coincidencias' : 'Sin compras registradas'}</td></tr>
-        {:else}
-          {#each comprasFiltradas as c}
-            <tr>
-              <td><span class="cell-id">#{c.id}</span></td>
-              <td>{formatFecha(c.fecha)}</td>
-              <td><span class="cell-mono">{c.numero_factura}</span></td>
-              <td><span class="cell-sub">{c.empleado}</span></td>
-              <td><span class="cell-total">{fmt(c.total)}</span></td>
-            </tr>
-          {/each}
-        {/if}
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    rows={comprasFiltradas}
+    canWrite={false}
+    canDelete={false}
+    colspan={5}
+    emptyMsg={hayFiltros ? 'Sin coincidencias' : 'Sin compras registradas'}
+  >
+    <svelte:fragment slot="headers">
+      <th>#</th><th>Fecha</th><th>No. Factura</th><th>Empleado</th><th>Total</th>
+    </svelte:fragment>
+    <svelte:fragment slot="row" let:row>
+      <td><span class="cell-id">#{row.id}</span></td>
+      <td>{formatFecha(row.fecha)}</td>
+      <td><span class="cell-mono">{row.numero_factura}</span></td>
+      <td><span class="cell-sub">{row.empleado}</span></td>
+      <td><span class="cell-total">{formatCurrency(row.total)}</span></td>
+    </svelte:fragment>
+  </DataTable>
 {/if}
