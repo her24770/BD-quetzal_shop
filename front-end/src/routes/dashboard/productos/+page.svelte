@@ -13,11 +13,11 @@
   import { formatCurrency, stockStatus } from '$lib/utils';
   import { type Producto, productosApi } from '$lib/api/productos';
   import { type Categoria, categoriasApi } from '$lib/api/categorias';
+  import { toast } from '$lib/stores/toast';
 
   let productos:  Producto[]  = [];
   let categorias: Categoria[] = [];
   let loading   = true;
-  let pageError = '';
   let errorMsg  = '';
   let saving    = false;
   let modalOpen = false;
@@ -52,7 +52,7 @@
       ]);
       if (categorias.length) form.categoria_id = String(categorias[0].id);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -98,6 +98,7 @@
       }
       productos = await productosApi.getAll(token);
       closeModal();
+      toast.push(mode === 'edit' ? 'Producto actualizado' : 'Producto creado', 'success');
     } catch (e: any) {
       errorMsg = e.message;
     } finally {
@@ -106,12 +107,12 @@
   }
 
   async function deleteItem(id: number) {
-    pageError = '';
     try {
       await productosApi.delete(token, id);
       productos = productos.filter(p => p.id !== id);
+      toast.push('Producto eliminado', 'success');
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     }
   }
 
@@ -192,7 +193,6 @@
   </div>
 </div>
 
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosProducto.busqueda}

@@ -12,10 +12,10 @@
   import { permisos } from '$lib/stores/permisos';
   import { formatFecha } from '$lib/utils';
   import { type Empleado, type EmpleadoForm, empleadosApi } from '$lib/api/empleados';
+  import { toast } from '$lib/stores/toast';
 
   let empleados: Empleado[] = [];
   let loading   = true;
-  let pageError = '';
   let errorMsg  = '';
   let saving    = false;
   let modalOpen = false;
@@ -41,7 +41,7 @@
     try {
       empleados = await empleadosApi.getAll(token);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -59,6 +59,7 @@
       await empleadosApi.create(token, form);
       empleados = await empleadosApi.getAll(token);
       closeModal();
+      toast.push('Empleado registrado', 'success');
     } catch (e: any) {
       errorMsg = e.message;
     } finally {
@@ -67,12 +68,12 @@
   }
 
   async function deleteItem(id: number) {
-    pageError = '';
     try {
       await empleadosApi.delete(token, id);
       empleados = empleados.filter(e => e.id !== id);
+      toast.push('Empleado eliminado', 'success');
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     }
   }
 
@@ -150,7 +151,6 @@
   </div>
 </div>
 
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosEmpleados.busqueda}

@@ -10,10 +10,10 @@
   import { requirePermiso } from '$lib/guards';
   import { formatCurrency, formatFecha } from '$lib/utils';
   import { type Venta, ventasApi } from '$lib/api/ventas';
+  import { toast } from '$lib/stores/toast';
 
   let ventas: Venta[] = [];
   let loading  = true;
-  let pageError = '';
 
   $: token = $auth.token ?? '';
 
@@ -32,7 +32,7 @@
     try {
       ventas = await ventasApi.getAll(token);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -54,8 +54,6 @@
     <Icon path={IC.down} size={13} /> Exportar CSV
   </button>
 </div>
-
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosVentas.busqueda}

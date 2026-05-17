@@ -1,18 +1,21 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { confirmStore } from '$lib/stores/confirm';
   import Icon from './Icon.svelte';
   import { IC } from '$lib/icons';
 
-  // rows: array de datos a mostrar
-  export let rows:      any[]  = [];
-  export let emptyMsg:  string = 'Sin registros';
-  // colspan de la fila vacía — debe coincidir con el número total de columnas
-  export let colspan:   number = 1;
-  // permisos de escritura
+  export let rows:      any[]   = [];
+  export let emptyMsg:  string  = 'Sin registros';
+  export let colspan:   number  = 1;
   export let canWrite:  boolean = false;
   export let canDelete: boolean = false;
+  export let confirmMsg: string = '¿Estás seguro de que deseas eliminar este elemento?';
 
   const dispatch = createEventDispatcher<{ edit: any; delete: number }>();
+
+  async function handleDelete(id: number) {
+    if (await confirmStore.ask(confirmMsg)) dispatch('delete', id);
+  }
 </script>
 
 <div class="qz-table-wrap">
@@ -41,7 +44,7 @@
                     </button>
                   {/if}
                   {#if canDelete}
-                    <button class="btn btn-sm btn-danger" on:click={() => dispatch('delete', row.id)}>
+                    <button class="btn btn-sm btn-danger" on:click={() => handleDelete(row.id)}>
                       <Icon path={IC.trash} size={11} /> Eliminar
                     </button>
                   {/if}

@@ -11,10 +11,10 @@
   import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
   import { type Cliente, type ClienteForm, clientesApi } from '$lib/api/clientes';
+  import { toast } from '$lib/stores/toast';
 
   let clientes: Cliente[] = [];
   let loading   = true;
-  let pageError = '';
   let errorMsg  = '';
   let saving    = false;
   let modalOpen = false;
@@ -40,7 +40,7 @@
     try {
       clientes = await clientesApi.getAll(token);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -66,6 +66,7 @@
       }
       clientes = await clientesApi.getAll(token);
       closeModal();
+      toast.push(mode === 'edit' ? 'Cliente actualizado' : 'Cliente creado', 'success');
     } catch (e: any) {
       errorMsg = e.message;
     } finally {
@@ -74,12 +75,12 @@
   }
 
   async function deleteItem(id: number) {
-    pageError = '';
     try {
       await clientesApi.delete(token, id);
       clientes = clientes.filter(c => c.id !== id);
+      toast.push('Cliente eliminado', 'success');
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     }
   }
 
@@ -143,7 +144,6 @@
   </div>
 </div>
 
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosClientes.busqueda}

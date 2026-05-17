@@ -11,10 +11,10 @@
   import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
   import { type Proveedor, type ProveedorForm, proveedoresApi } from '$lib/api/proveedores';
+  import { toast } from '$lib/stores/toast';
 
   let proveedores: Proveedor[] = [];
   let loading   = true;
-  let pageError = '';
   let errorMsg  = '';
   let saving    = false;
   let modalOpen = false;
@@ -40,7 +40,7 @@
     try {
       proveedores = await proveedoresApi.getAll(token);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -66,6 +66,7 @@
       }
       proveedores = await proveedoresApi.getAll(token);
       closeModal();
+      toast.push(mode === 'edit' ? 'Proveedor actualizado' : 'Proveedor creado', 'success');
     } catch (e: any) {
       errorMsg = e.message;
     } finally {
@@ -74,12 +75,12 @@
   }
 
   async function deleteItem(id: number) {
-    pageError = '';
     try {
       await proveedoresApi.delete(token, id);
       proveedores = proveedores.filter(p => p.id !== id);
+      toast.push('Proveedor eliminado', 'success');
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     }
   }
 
@@ -143,7 +144,6 @@
   </div>
 </div>
 
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosProveedores.busqueda}

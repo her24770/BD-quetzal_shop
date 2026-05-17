@@ -10,10 +10,10 @@
   import { requirePermiso } from '$lib/guards';
   import { permisos } from '$lib/stores/permisos';
   import { type Categoria, type CategoriaForm, categoriasApi } from '$lib/api/categorias';
+  import { toast } from '$lib/stores/toast';
 
   let categorias: Categoria[] = [];
   let loading   = true;
-  let pageError = '';
   let errorMsg  = '';
   let saving    = false;
   let modalOpen = false;
@@ -39,7 +39,7 @@
     try {
       categorias = await categoriasApi.getAll(token);
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     } finally {
       loading = false;
     }
@@ -65,6 +65,7 @@
       }
       categorias = await categoriasApi.getAll(token);
       closeModal();
+      toast.push(mode === 'edit' ? 'Categoría actualizada' : 'Categoría creada', 'success');
     } catch (e: any) {
       errorMsg = e.message;
     } finally {
@@ -73,12 +74,12 @@
   }
 
   async function deleteItem(id: number) {
-    pageError = '';
     try {
       await categoriasApi.delete(token, id);
       categorias = categorias.filter(c => c.id !== id);
+      toast.push('Categoría eliminada', 'success');
     } catch (e: any) {
-      pageError = e.message;
+      toast.push(e.message, 'error');
     }
   }
 </script>
@@ -121,8 +122,6 @@
     </button>
   {/if}
 </div>
-
-{#if pageError}<div class="page-error">{pageError}</div>{/if}
 
 <FilterBar
   value={$filtrosCategorias.busqueda}
