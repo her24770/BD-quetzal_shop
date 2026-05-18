@@ -109,11 +109,13 @@ segun el .example
 
 ### Acceso a la aplicacion web
 
-| Rol       | Correo                     | Contrasena |
-|-----------|----------------------------|------------|
-| Admin     | admin@quetzalshop.com      | admin123   |
-| Cajero    | cajero1@quetzalshop.com    | cajero123  |
-| Bodeguero | bodeguero1@quetzalshop.com | bodega123  |
+| Rol       | Correo                     | Contrasena  |
+|-----------|----------------------------|-------------|
+| Admin     | admin@quetzalshop.com      | admin123    |
+| Cajero    | cajero1@quetzalshop.com    | cajero123   |
+| Bodeguero | bodeguero1@quetzalshop.com | bodega123   |
+| Gerente   | gerente@quetzalshop.com    | gerente123  |
+| Auditor   | auditor@quetzalshop.com    | auditor123  |
 
 ### Acceso directo a la base de datos
 
@@ -122,23 +124,38 @@ segun el .example
 | Host       | localhost      |
 | Puerto     | 5432           |
 | Base       | quetzalshop_db |
-| Usuario    | proy2          |
+| Usuario    | proy3          |
 | Contrasena | secret         |
 
 ---
 
 ## Roles y permisos
 
-| Modulo        | Admin (1)       | Cajero (2)   | Bodeguero (3) |
-|---------------|:---------------:|:------------:|:-------------:|
-| Dashboard     | si              | si           | si            |
-| Productos     | CRUD            | lectura      | CRUD          |
-| Categorias    | CRUD            | --           | lectura       |
-| Proveedores   | CRUD            | --           | lectura       |
-| Clientes      | CRUD            | CRUD         | --            |
-| Transacciones | ventas + compras| solo ventas  | solo compras  |
-| Historial     | ventas + compras| solo ventas  | solo compras  |
-| Empleados     | CRUD            | --           | --            |
+### Roles de PostgreSQL
+
+Cada rol tiene su propio usuario en PostgreSQL con permisos granulares. El backend conecta con el pool del rol correspondiente al usuario autenticado.
+
+| Rol PostgreSQL  | rol_id | SELECT                                              | INSERT                        | UPDATE             | DELETE |
+|-----------------|--------|-----------------------------------------------------|-------------------------------|--------------------|--------|
+| qs_admin        | 1      | todas las tablas                                    | todas las tablas              | todas las tablas   | todas las tablas |
+| qs_cajero       | 2      | productos, categorias, clientes, ventas, items_venta | clientes, ventas, items_venta | clientes           | —      |
+| qs_bodeguero    | 3      | productos, categorias, proveedores, compras, items_compra | productos, proveedores, compras, items_compra | productos, proveedores | — |
+| qs_gerente      | 4      | todas las tablas                                    | —                             | —                  | —      |
+| qs_auditor      | 5      | ventas, items_venta, compras, items_compra          | —                             | —                  | —      |
+
+### Acceso por modulo
+
+| Modulo           | Admin (1)        | Cajero (2)    | Bodeguero (3)  | Gerente (4)      | Auditor (5)      |
+|------------------|:----------------:|:-------------:|:--------------:|:----------------:|:----------------:|
+| Dashboard        | si               | si            | si             | si               | si               |
+| Productos        | CRUD             | lectura       | CRUD           | lectura          | —                |
+| Categorias       | CRUD             | —             | lectura        | lectura          | —                |
+| Proveedores      | CRUD             | —             | lectura        | lectura          | —                |
+| Clientes         | CRUD             | CRUD          | —              | lectura          | —                |
+| Transacciones    | ventas + compras | solo ventas   | solo compras   | —                | —                |
+| Historial        | ventas + compras | solo ventas   | solo compras   | ventas + compras | ventas + compras |
+| Empleados        | CRUD             | —             | —              | lectura          | —                |
+| Gestion permisos | si               | —             | —              | —                | —                |
 
 ---
 
