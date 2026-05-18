@@ -105,6 +105,31 @@ segun el .example
 
 ---
 
+## Arquitectura de contenedores
+
+El proyecto levanta **tres contenedores Docker completamente independientes**. El back-end y el front-end son procesos separados que no comparten nada entre si; la unica comunicacion entre ellos es a traves de la API REST.
+
+| Contenedor           | Stack                 | Puerto al host    | Descripcion                                                                                          |
+|----------------------|-----------------------|-------------------|------------------------------------------------------------------------------------------------------|
+| `quetzalshop-db`     | PostgreSQL 15         | ninguno (interno) | Base de datos. Solo accesible desde la red interna de Docker. Al iniciarse por primera vez carga automaticamente `schema.sql`, `views.sql`, `seed.sql` y `stored_procedures.sql`. |
+| `quetzalshop-back`   | Python 3.11 + FastAPI | **8000**          | API REST. Se conecta a `quetzalshop-db` por la red interna. No esta expuesto al navegador directamente; el front-end lo llama via fetch. |
+| `quetzalshop-front`  | Node 20 + SvelteKit   | **5173**          | Interfaz web. Se comunica **exclusivamente** con el back-end via API REST. No tiene acceso directo a la base de datos en ningun momento. |
+
+```
+Navegador
+    |
+    +-- :5173 --> quetzalshop-front  (SvelteKit)
+                        |
+                        +-- API REST :8000 --> quetzalshop-back  (FastAPI)
+                                                      |
+                                          quetzalshop-db  (PostgreSQL)
+                                          [red interna Docker — sin puerto publico]
+```
+
+El front-end jamas accede directamente a PostgreSQL. Toda la logica de negocio y el acceso a datos pasan por el back-end. Los tres servicios pueden detenerse, reconstruirse o escalarse de forma independiente.
+
+---
+
 ## Credenciales de prueba
 
 ### Acceso a la aplicacion web
@@ -124,7 +149,7 @@ segun el .example
 | Host       | localhost      |
 | Puerto     | 5432           |
 | Base       | quetzalshop_db |
-| Usuario    | proy3          |
+| Usuario    | proy2          |
 | Contrasena | secret         |
 
 ---
@@ -276,7 +301,7 @@ Svelte reemplaza el patron `createContext` + `Provider` + `useContext` con store
 Svelte maneja estos cuatro hooks con mecanismos propios del compilador. Las variables declaradas con `let` en el bloque `<script>` son reactivas por defecto —equivalente a `useState`—: cualquier reasignacion dispara una actualizacion del DOM sin necesidad de un setter explicito. Los efectos de montaje se implementan con `onMount`, que se ejecuta una unica vez al insertar el componente en el DOM, cumpliendo el rol de `useEffect` con arreglo de dependencias vacio. Los valores derivados se expresan con instrucciones reactivas prefijadas con `$:`, que el compilador recalcula automaticamente cada vez que cambia alguna de sus dependencias, reemplazando `useMemo`; en `productos/+page.svelte` esto se usa para calcular la lista filtrada cada vez que cambia el store de filtros o el arreglo de productos. Las funciones de evento —handlers de formularios, apertura y cierre de modales, acciones de tabla— se definen directamente en `<script>` sin necesitar `useCallback`, porque Svelte no re-ejecuta el bloque de script en cada render.
 
 **Flujo de estado complejo con useReducer → custom store con acciones**
-El archivo `src/lib/stores/filtros.ts` implementa el patron equivalente a `useReducer`: cada store de filtros expone metodos nombrados (`setBusqueda`, `setCategoria`, `setStockStatus`, `reset`) en lugar de un `set` generico, de manera que el estado solo puede modificarse a traves de acciones semanticas definidas, analogas a los `type` de un reducer. Este patron se aplica en siete paginas del dashboard —productos, ventas, compras, clientes, categorias, proveedores y empleados—, cada una con su propio store de filtros tipado en TypeScript.
+El archivo `src/lib/stores/filtros.ts` implementa el patron equivalente a `useReducer` mediante una fabrica `makeStore<T>` que envuelve un `writable` de Svelte. Cada store expone dos acciones: `set(parcial)` —que aplica una actualizacion parcial sobre el estado actual, analogo a despachar una accion "UPDATE_FIELD" en un reducer— y `reset()` —analogo a despachar "RESET"—. El estado de cada store es un objeto con multiples campos (por ejemplo, `{ busqueda, categoria_id, stock_status }` en productos), lo que constituye el flujo de estado complejo que reemplaza a `useReducer`. Ningun componente modifica el estado directamente: siempre pasa por la interfaz del store, igual que `dispatch` centraliza los cambios en el patron Flux/useReducer. Este patron se aplica en siete paginas del dashboard —productos, ventas, compras, clientes, categorias, proveedores y empleados—, cada una con su propio store de filtros tipado en TypeScript.
 
 **Formularios controlados con validacion → bind:value + validacion en submit**
 En lugar del patron `value={state}` + `onChange` de React, Svelte usa la directiva `bind:value` para sincronizacion bidireccional automatica entre cada campo del formulario y la variable correspondiente. La validacion del lado del cliente ocurre dentro de la funcion `saveForm()` antes de cualquier llamada a la API: si algun campo requerido esta vacio, se muestra un mensaje de error en pantalla y se interrumpe el envio sin recargar la pagina. Todos los formularios de creacion y edicion se presentan en el componente modal reutilizable `Modal.svelte`.

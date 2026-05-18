@@ -280,7 +280,7 @@ $$;
 
 
 -- SP7: otorga un permiso (GRANT) a un rol sobre una tabla usando SQL dinámico
--- SECURITY DEFINER: corre con privilegios del owner (proy3), no del rol que lo llama
+-- SECURITY DEFINER: corre con privilegios del owner (proy2), no del rol que lo llama
 -- Permite que qs_admin ejecute GRANTs sin ser superusuario
 CREATE OR REPLACE PROCEDURE sp_grant_permiso_rol(
     IN    p_nombre_rol VARCHAR,

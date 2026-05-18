@@ -175,7 +175,7 @@ ON items_compra(compra_id);
 -- ============================================================
 -- ROLES DE POSTGRESQL (Proyecto 3)
 -- Cada rol tiene LOGIN propio — el API conecta con el rol del usuario autenticado
--- proy3 sigue siendo el owner pero ya no lo usa el API en runtime
+-- proy2 es el owner de la base de datos; el API en runtime usa los roles especificos (qs_admin, qs_cajero, etc.)
 -- ============================================================
 DO $$
 BEGIN
