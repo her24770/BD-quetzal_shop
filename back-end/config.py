@@ -23,8 +23,9 @@ class Settings:
     APP_ENV: str = os.getenv("APP_ENV", "development")
 
     # CORS — orígenes permitidos separados por coma en el .env
+    _frontend_port: str = os.getenv("FRONTEND_PORT", "3000")
     CORS_ORIGINS: list = os.getenv(
-        "CORS_ORIGINS", "http://localhost:5173,http://localhost:3000"
+        "CORS_ORIGINS", f"http://localhost:{_frontend_port}"
     ).split(",")
 
     # Credenciales de los 5 roles de PostgreSQL (las usa el API en runtime)

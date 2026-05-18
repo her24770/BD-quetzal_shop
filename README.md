@@ -49,10 +49,10 @@ JWT_EXPIRE_HOURS=24
 # Backend
 APP_PORT=8000
 APP_ENV=development
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+CORS_ORIGINS=http://localhost:3000,http://localhost:3000
 
 # Frontend
-FRONTEND_PORT=5173
+FRONTEND_PORT=3000
 VITE_API_URL=http://localhost:8000
 ```
 
@@ -99,7 +99,7 @@ segun el .example
 
 | Servicio        | URL                        |
 |-----------------|----------------------------|
-| Frontend        | http://localhost:5173      |
+| Frontend        | http://localhost:3000      |
 | Backend API     | http://localhost:8000      |
 | Documentacion   | http://localhost:8000/docs |
 
@@ -113,12 +113,12 @@ El proyecto levanta **tres contenedores Docker completamente independientes**. E
 |----------------------|-----------------------|-------------------|------------------------------------------------------------------------------------------------------|
 | `quetzalshop-db`     | PostgreSQL 15         | ninguno (interno) | Base de datos. Solo accesible desde la red interna de Docker. Al iniciarse por primera vez carga automaticamente `schema.sql`, `views.sql`, `seed.sql` y `stored_procedures.sql`. |
 | `quetzalshop-back`   | Python 3.11 + FastAPI | **8000**          | API REST. Se conecta a `quetzalshop-db` por la red interna. No esta expuesto al navegador directamente; el front-end lo llama via fetch. |
-| `quetzalshop-front`  | Node 20 + SvelteKit   | **5173**          | Interfaz web. Se comunica **exclusivamente** con el back-end via API REST. No tiene acceso directo a la base de datos en ningun momento. |
+| `quetzalshop-front`  | Node 20 + SvelteKit   | **3000**          | Interfaz web. Se comunica **exclusivamente** con el back-end via API REST. No tiene acceso directo a la base de datos en ningun momento. |
 
 ```
 Navegador
     |
-    +-- :5173 --> quetzalshop-front  (SvelteKit)
+    +-- :3000 --> quetzalshop-front  (SvelteKit)
                         |
                         +-- API REST :8000 --> quetzalshop-back  (FastAPI)
                                                       |
@@ -358,7 +358,7 @@ docker compose up
 
 | Servicio          | URL                        |
 |-------------------|----------------------------|
-| Frontend          | http://localhost:5173      |
+| Frontend          | http://localhost:3000      |
 | Backend API       | http://localhost:8000      |
 | Documentacion API | http://localhost:8000/docs |
 
