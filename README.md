@@ -2,7 +2,7 @@
 
 Proyecto 2 — cc3062 Sistemas y Tecnologías Web | UVG Ciclo 1 2026
 
-Para esta entrega en especifico la rama que contiene lo necesario es la develop.
+Para esta entrega en especifico la rama que contiene lo necesario es la develop ya que es una extension de otro proyecto que no ha sido calificado y la main no puede ser actualiazada.
 
 Sistema de punto de venta para una tienda, compuesto por una base de datos PostgreSQL, una API REST con FastAPI y una interfaz web con SvelteKit. El stack completo se levanta con un solo comando mediante Docker Compose.
 
