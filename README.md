@@ -21,6 +21,7 @@ Sistema de punto de venta para una tienda, compuesto por una base de datos Postg
 ```bash
 git clone https://github.com/her24770/BD-quetzal_shop
 cd BD-quetzal_shop
+git checkout develop
 ```
 
 ### 2. Copiar los archivos de configuracion
