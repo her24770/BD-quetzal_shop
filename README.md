@@ -20,8 +20,16 @@ Rama de entrega: `proyecto-3`
 git clone https://github.com/her24770/BD-quetzal_shop
 cd BD-quetzal_shop
 git checkout proyecto-3
+```
+
+Variables de entorno
+```bash
 cp docker-compose.yml.example docker-compose.yml
 cp .env.example .env
+```
+
+Levantar con docker
+```bash
 docker compose up
 ```
 
