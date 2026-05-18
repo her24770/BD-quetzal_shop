@@ -18,7 +18,7 @@ Sistema de punto de venta para una tienda, compuesto por una base de datos Postg
 ### 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/her24770/BD-quetzal_shop/tree/develop
 cd BD-quetzal_shop
 ```
 
@@ -95,7 +95,15 @@ docker compose down -v
 ---
 
 ## URLs de acceso
-segun el .example
+
+### Produccion
+
+| Servicio   | URL                                        |
+|------------|--------------------------------------------|
+| Aplicacion | https://quetzalshop.jhgo.online            |
+| API docs   | https://quetzalshop.jhgo.online/api/docs   |
+
+### Desarrollo local (segun `.env.example`)
 
 | Servicio        | URL                        |
 |-----------------|----------------------------|
@@ -114,17 +122,6 @@ El proyecto levanta **tres contenedores Docker completamente independientes**. E
 | `quetzalshop-db`     | PostgreSQL 15         | ninguno (interno) | Base de datos. Solo accesible desde la red interna de Docker. Al iniciarse por primera vez carga automaticamente `schema.sql`, `views.sql`, `seed.sql` y `stored_procedures.sql`. |
 | `quetzalshop-back`   | Python 3.11 + FastAPI | **8000**          | API REST. Se conecta a `quetzalshop-db` por la red interna. No esta expuesto al navegador directamente; el front-end lo llama via fetch. |
 | `quetzalshop-front`  | Node 20 + SvelteKit   | **3000**          | Interfaz web. Se comunica **exclusivamente** con el back-end via API REST. No tiene acceso directo a la base de datos en ningun momento. |
-
-```
-Navegador
-    |
-    +-- :3000 --> quetzalshop-front  (SvelteKit)
-                        |
-                        +-- API REST :8000 --> quetzalshop-back  (FastAPI)
-                                                      |
-                                          quetzalshop-db  (PostgreSQL)
-                                          [red interna Docker — sin puerto publico]
-```
 
 El front-end jamas accede directamente a PostgreSQL. Toda la logica de negocio y el acceso a datos pasan por el back-end. Los tres servicios pueden detenerse, reconstruirse o escalarse de forma independiente.
 
@@ -169,6 +166,8 @@ Cada rol tiene su propio usuario en PostgreSQL con permisos granulares. El backe
 | qs_auditor      | 5      | ventas, items_venta, compras, items_compra          | —                             | —                  | —      |
 
 ### Acceso por modulo
+
+La isugiente tabla muestra el accedor por defecto ya que el proyecto por medio de front solamente al administrador permite cambiar los roles tanto en logia de back-end como el manejo de roles en bd. teniendo un predereterminado en roles al crear y ejecutar lo sql iniciales y puede modificarse dinamicamente al conectarse en el front como administrador.
 
 | Modulo           | Admin (1)        | Cajero (2)    | Bodeguero (3)  | Gerente (4)      | Auditor (5)      |
 |------------------|:----------------:|:-------------:|:--------------:|:----------------:|:----------------:|
