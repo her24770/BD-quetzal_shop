@@ -41,7 +41,7 @@ services:
       context: ./front-end
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT}:3000"
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     depends_on:
       - backend
     env_file:

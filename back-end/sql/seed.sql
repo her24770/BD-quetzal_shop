@@ -350,3 +350,48 @@ INSERT INTO items_compra (compra_id, producto_id, proveedor_id, cantidad, precio
 (10, 19, 2, 4,   800.00,  3200.00),
 (10, 18, 1, 10,  120.00,  1200.00),
 (11, 20, 5, 10,  90.00,   900.00);
+
+-- ============================================================
+-- PRODUCTOS ADICIONALES
+-- ============================================================
+INSERT INTO productos (nombre, descripcion, precio, stock, stock_minimo, categoria_id) VALUES
+('Disco Duro SSD Kingston 512GB', 'SSD SATA 2.5 pulgadas, 512GB, lectura 550MB/s, escritura 500MB/s', 650.00, 2,  5, 1),
+('Webcam Logitech C920',          'Camara web Full HD 1080p, microfono integrado, USB',               480.00, 9,  4, 1);
+-- producto_id 26: stock=2, stock_minimo=5 → STOCK BAJO
+-- producto_id 27: stock=9, stock_minimo=4 → ok
+
+INSERT INTO producto_proveedor (producto_id, proveedor_id, precio_costo) VALUES
+(26, 1, 480.00),
+(27, 1, 350.00);
+
+-- ============================================================
+-- COMPRAS DE MAYO 2026
+-- ============================================================
+INSERT INTO compras (empleado_id, fecha, total, numero_factura) VALUES
+(5, '2026-05-02 08:30:00', 2850.00, 'FAC-2026-0026'),
+(6, '2026-05-06 09:00:00', 2400.00, 'FAC-2026-0027'),
+(9, '2026-05-09 08:00:00', 6235.00, 'FAC-2026-0028'),
+(5, '2026-05-13 08:00:00', 2320.00, 'FAC-2026-0029'),
+(6, '2026-05-16 09:30:00', 1450.00, 'FAC-2026-0030');
+
+INSERT INTO items_compra (compra_id, producto_id, proveedor_id, cantidad, precio_costo_historico, subtotal) VALUES
+-- Compra 26: restock bebidas
+(26, 6,  4, 500, 2.50,    1250.00),
+(26, 7,  4, 200, 4.00,     800.00),
+(26, 9,  4, 50,  16.00,    800.00),
+-- Compra 27: restock alimentos
+(27, 12, 2, 100, 8.00,     800.00),
+(27, 13, 2, 80,  10.00,    800.00),
+(27, 14, 2, 40,  20.00,    800.00),
+-- Compra 28: restock electronica
+(28, 3,  1, 20,  150.00,  3000.00),
+(28, 4,  1, 8,   320.00,  2560.00),
+(28, 25, 1, 15,  45.00,    675.00),
+-- Compra 29: restock salud
+(29, 22, 2, 40,  28.00,   1120.00),
+(29, 23, 2, 30,  20.00,    600.00),
+(29, 24, 2, 25,  24.00,    600.00),
+-- Compra 30: restock papeleria
+(30, 15, 3, 300, 1.50,     450.00),
+(30, 16, 3, 50,  16.00,    800.00),
+(30, 17, 3, 200, 1.00,     200.00);
