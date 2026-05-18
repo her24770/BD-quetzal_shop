@@ -32,10 +32,12 @@ BEGIN
 
         -- NOT FOUND es TRUE cuando el SELECT anterior no encontró ninguna fila
         IF NOT FOUND THEN
+            ROLLBACK;
             RAISE EXCEPTION 'Producto % no encontrado', v_item->>'producto_id';
         END IF;
 
         IF v_stock < (v_item->>'cantidad')::INT THEN
+            ROLLBACK;
             RAISE EXCEPTION 'Stock insuficiente para el producto %', v_item->>'producto_id';
         END IF;
 
@@ -97,10 +99,12 @@ BEGIN
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
 
         IF NOT EXISTS (SELECT 1 FROM productos  WHERE id = (v_item->>'producto_id')::INT) THEN
+            ROLLBACK;
             RAISE EXCEPTION 'Producto % no encontrado', v_item->>'producto_id';
         END IF;
 
         IF NOT EXISTS (SELECT 1 FROM proveedores WHERE id = (v_item->>'proveedor_id')::INT) THEN
+            ROLLBACK;
             RAISE EXCEPTION 'Proveedor % no encontrado', v_item->>'proveedor_id';
         END IF;
 
@@ -155,6 +159,12 @@ CREATE OR REPLACE PROCEDURE sp_crear_empleado(
 )
 LANGUAGE plpgsql AS $$
 BEGIN
+
+    -- Validar email único antes de insertar; si ya existe, ROLLBACK explícito y error
+    IF EXISTS (SELECT 1 FROM usuarios WHERE email = p_email) THEN
+        ROLLBACK;
+        RAISE EXCEPTION 'El email % ya esta registrado', p_email;
+    END IF;
 
     INSERT INTO usuarios (email, password_hash, rol_id)
     VALUES (p_email, p_password_hash, p_rol_id)
