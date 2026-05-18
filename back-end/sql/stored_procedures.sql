@@ -1,9 +1,7 @@
 -- QuetzalShop — Stored Procedures (Proyecto 3, CC3088 Bases de Datos 1)
 
 
--- SP1: registra venta completa (cabecera + items + descuento de stock) en una sola transacción
--- Parámetro INOUT p_venta_id: devuelve el ID generado sin necesitar una segunda consulta
--- JSONB permite recibir toda la lista de items como un solo parámetro
+-- SP1: registra una venta completa con sus items y descuenta el stock
 CREATE OR REPLACE PROCEDURE sp_registrar_venta(
     IN  p_cliente_id     INT,
     IN  p_empleado_id    INT,
@@ -20,17 +18,14 @@ DECLARE
     v_total    NUMERIC(10,2) := 0;
 BEGIN
 
-    -- 1ra pasada: validar stock de todos los items antes de escribir nada en la BD
-    -- Si cualquier producto falla, RAISE EXCEPTION aborta y PostgreSQL deshace todo
+    -- primera pasada: validar stock de todos los productos antes de escribir nada
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
 
-        -- jsonb_array_elements expande el array; ->> extrae campo como texto; ::INT lo convierte
         SELECT precio, stock
         INTO   v_precio, v_stock
         FROM   productos
         WHERE  id = (v_item->>'producto_id')::INT;
 
-        -- NOT FOUND es TRUE cuando el SELECT anterior no encontró ninguna fila
         IF NOT FOUND THEN
             ROLLBACK;
             RAISE EXCEPTION 'Producto % no encontrado', v_item->>'producto_id';
@@ -47,18 +42,18 @@ BEGIN
 
     v_total := v_total - p_descuento;
 
-    -- RETURNING id INTO captura el ID generado por la secuencia en el parámetro INOUT
+    -- inserta la cabecera de la venta y guarda el id generado
     INSERT INTO ventas (cliente_id, empleado_id, metodo_pago_id, total, descuento)
     VALUES (p_cliente_id, p_empleado_id, p_metodo_pago_id, v_total, p_descuento)
     RETURNING id INTO p_venta_id;
 
-    -- 2da pasada: escribir items y descontar stock (validación ya fue aprobada arriba)
+    -- segunda pasada: inserta los items y descuenta el stock de cada producto
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
 
         SELECT precio INTO v_precio
         FROM productos WHERE id = (v_item->>'producto_id')::INT;
 
-        -- precio_unitario_historico guarda el precio al momento de la venta para auditoría
+        -- guarda el precio actual como historico para trazabilidad
         INSERT INTO items_venta (venta_id, producto_id, cantidad, precio_unitario_historico, subtotal)
         VALUES (
             p_venta_id,
@@ -74,14 +69,13 @@ BEGIN
 
     END LOOP;
 
-    -- COMMIT explícito: cierra la transacción desde el SP; requiere autocommit=True en psycopg2
     COMMIT;
 
 END;
 $$;
 
 
--- SP2: registra compra de inventario (cabecera + items + aumento de stock) en una sola transacción
+-- SP2: registra una compra de inventario con sus items y suma el stock
 CREATE OR REPLACE PROCEDURE sp_registrar_compra(
     IN  p_empleado_id    INT,
     IN  p_numero_factura VARCHAR(50),
@@ -94,11 +88,10 @@ DECLARE
     v_total NUMERIC(10,2) := 0;
 BEGIN
 
-    -- 1ra pasada: validar que producto y proveedor existan antes de escribir
-    -- EXISTS (SELECT 1 ...) es más eficiente que COUNT(*): para al encontrar la primera fila
+    -- primera pasada: verificar que producto y proveedor existan antes de escribir
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
 
-        IF NOT EXISTS (SELECT 1 FROM productos  WHERE id = (v_item->>'producto_id')::INT) THEN
+        IF NOT EXISTS (SELECT 1 FROM productos WHERE id = (v_item->>'producto_id')::INT) THEN
             ROLLBACK;
             RAISE EXCEPTION 'Producto % no encontrado', v_item->>'producto_id';
         END IF;
@@ -116,10 +109,10 @@ BEGIN
     VALUES (p_empleado_id, p_numero_factura, v_total)
     RETURNING id INTO p_compra_id;
 
-    -- 2da pasada: insertar items y sumar stock a cada producto
+    -- segunda pasada: inserta los items y suma el stock a cada producto
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
 
-        -- precio_costo_historico guarda el costo al momento de la compra para trazabilidad contable
+        -- guarda el costo de compra como historico para trazabilidad contable
         INSERT INTO items_compra (compra_id, producto_id, proveedor_id, cantidad, precio_costo_historico, subtotal)
         VALUES (
             p_compra_id,
@@ -142,9 +135,7 @@ END;
 $$;
 
 
--- SP3: crea usuario + empleado en una sola transacción atómica
--- Sin este SP, si el 2do INSERT falla quedaría un usuario sin empleado (registro huérfano)
--- Dos parámetros INOUT devuelven ambos IDs generados al llamador
+-- SP3: crea un usuario y su empleado en una sola transaccion atomica
 CREATE OR REPLACE PROCEDURE sp_crear_empleado(
     IN  p_email          VARCHAR(150),
     IN  p_password_hash  VARCHAR(255),
@@ -160,7 +151,7 @@ CREATE OR REPLACE PROCEDURE sp_crear_empleado(
 LANGUAGE plpgsql AS $$
 BEGIN
 
-    -- Validar email único antes de insertar; si ya existe, ROLLBACK explícito y error
+    -- verifica que el email no este en uso antes de insertar
     IF EXISTS (SELECT 1 FROM usuarios WHERE email = p_email) THEN
         ROLLBACK;
         RAISE EXCEPTION 'El email % ya esta registrado', p_email;
@@ -170,7 +161,7 @@ BEGIN
     VALUES (p_email, p_password_hash, p_rol_id)
     RETURNING id INTO p_usuario_id;
 
-    -- Si este INSERT falla, PostgreSQL deshace el INSERT de usuarios porque el COMMIT aún no ocurrió
+    -- si este insert falla el anterior se deshace junto con el
     INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato)
     VALUES (p_usuario_id, p_dpi, p_nombre, p_telefono, p_cargo, p_fecha_contrato)
     RETURNING id INTO p_empleado_id;
@@ -181,8 +172,7 @@ END;
 $$;
 
 
--- SP4: ajuste manual de stock (incrementar o decrementar) con validaciones de negocio
--- No tiene COMMIT propio: el llamador (Python) controla la transacción externamente
+-- SP4: ajusta el stock de un producto, ya sea sumando o restando
 CREATE OR REPLACE PROCEDURE sp_actualizar_stock(
     IN    p_producto_id INT,
     IN    p_cantidad    INT,
@@ -195,7 +185,7 @@ DECLARE
     v_stock_actual INT;
 BEGIN
 
-    -- Whitelist explícita: p_operacion se usará en lógica condicional, no en SQL dinámico
+    -- solo se aceptan estas dos operaciones
     IF p_operacion NOT IN ('incrementar', 'decrementar') THEN
         RAISE EXCEPTION 'Operacion invalida: debe ser "incrementar" o "decrementar"';
     END IF;
@@ -211,7 +201,6 @@ BEGIN
         RAISE EXCEPTION 'Stock insuficiente: actual=%, solicitado=%', v_stock_actual, p_cantidad;
     END IF;
 
-    -- RETURNING stock INTO captura el nuevo valor tras el UPDATE en una sola operación
     IF p_operacion = 'incrementar' THEN
         UPDATE productos SET stock = stock + p_cantidad WHERE id = p_producto_id
         RETURNING stock INTO p_stock_nuevo;
@@ -226,9 +215,7 @@ END;
 $$;
 
 
--- SP5: elimina un producto manejando la violación de FK de forma controlada
--- Retorna un código en p_resultado en lugar de propagar la excepción al llamador
--- EXCEPTION puede coexistir aquí porque este SP no tiene COMMIT explícito
+-- SP5: elimina un producto; si tiene referencias activas retorna un mensaje en lugar de fallar
 CREATE OR REPLACE PROCEDURE sp_eliminar_producto(
     IN    p_producto_id INT,
     INOUT p_resultado   VARCHAR DEFAULT NULL
@@ -245,7 +232,7 @@ BEGIN
     p_resultado := 'OK';
 
 EXCEPTION
-    -- WHEN foreign_key_violation: captura solo el error SQLSTATE 23503 (referencia activa en otra tabla)
+    -- si el producto esta referenciado en ventas, compras o proveedores no se puede borrar
     WHEN foreign_key_violation THEN
         p_resultado := 'El producto no se puede eliminar porque esta referenciado en ventas, compras o proveedores';
 
@@ -253,9 +240,7 @@ END;
 $$;
 
 
--- SP6: agrega ventas diarias en un rango de fechas
--- Es FUNCTION (no PROCEDURE) porque RETURNS TABLE permite devolver un conjunto de filas
--- Las FUNCTIONs se invocan con SELECT * FROM funcion(...); los PROCEDUREs no pueden retornar tablas
+-- SP6: retorna las ventas agrupadas por dia en un rango de fechas
 CREATE OR REPLACE FUNCTION sp_reporte_ventas_periodo(
     p_fecha_inicio DATE,
     p_fecha_fin    DATE
@@ -273,12 +258,11 @@ BEGIN
         RAISE EXCEPTION 'La fecha de inicio no puede ser mayor que la fecha de fin';
     END IF;
 
-    -- RETURN QUERY ejecuta el SELECT y vuelca sus filas como resultado de la función
     RETURN QUERY
     SELECT
         v.fecha::DATE,
         COUNT(v.id)::BIGINT,
-        COALESCE(SUM(v.total), 0)::NUMERIC,   -- COALESCE protege contra NULL cuando no hay ventas
+        COALESCE(SUM(v.total), 0)::NUMERIC,
         COALESCE(AVG(v.total), 0)::NUMERIC
     FROM ventas v
     WHERE v.fecha::DATE BETWEEN p_fecha_inicio AND p_fecha_fin
@@ -289,9 +273,8 @@ END;
 $$;
 
 
--- SP7: otorga un permiso (GRANT) a un rol sobre una tabla usando SQL dinámico
--- SECURITY DEFINER: corre con privilegios del owner (proy2), no del rol que lo llama
--- Permite que qs_admin ejecute GRANTs sin ser superusuario
+-- SP7: otorga un permiso sobre una tabla a un rol especifico
+-- usa SECURITY DEFINER para poder ejecutar GRANTs sin ser superusuario
 CREATE OR REPLACE PROCEDURE sp_grant_permiso_rol(
     IN    p_nombre_rol VARCHAR,
     IN    p_tabla      VARCHAR,
@@ -303,8 +286,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
 
-    -- Whitelist obligatoria: las keywords SQL no pueden parametrizarse con %I, solo con %s
-    -- Validar antes de usarlas en SQL dinámico previene inyección de comandos
+    -- valida la operacion antes de usarla en sql dinamico
     IF p_operacion NOT IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') THEN
         RAISE EXCEPTION 'Operacion invalida: debe ser SELECT, INSERT, UPDATE o DELETE';
     END IF;
@@ -320,7 +302,6 @@ BEGIN
         RAISE EXCEPTION 'El rol % no existe', p_nombre_rol;
     END IF;
 
-    -- format() construye el SQL dinámico; %I escapa tabla y rol como identificadores seguros
     EXECUTE format('GRANT %s ON %I TO %I', p_operacion, p_tabla, p_nombre_rol);
 
     p_resultado := 'OK: GRANT ' || p_operacion || ' ON ' || p_tabla || ' TO ' || p_nombre_rol;
@@ -329,9 +310,8 @@ END;
 $$;
 
 
--- SP8: revoca un permiso (REVOKE) de un rol sobre una tabla
--- Misma lógica de seguridad que SP7; protege a qs_admin de revocaciones accidentales
--- REVOKE es idempotente en PostgreSQL: no falla si el permiso no existía
+-- SP8: revoca un permiso sobre una tabla de un rol especifico
+-- qs_admin no puede perder permisos
 CREATE OR REPLACE PROCEDURE sp_revoke_permiso_rol(
     IN    p_nombre_rol VARCHAR,
     IN    p_tabla      VARCHAR,
@@ -343,7 +323,6 @@ SECURITY DEFINER
 AS $$
 BEGIN
 
-    -- qs_admin nunca puede quedarse sin permisos: es el rol raíz del sistema
     IF p_nombre_rol = 'qs_admin' THEN
         RAISE EXCEPTION 'No se pueden revocar permisos de qs_admin (rol raiz del sistema)';
     END IF;
