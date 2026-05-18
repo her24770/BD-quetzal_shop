@@ -19,7 +19,7 @@ Sistema de punto de venta para una tienda, compuesto por una base de datos Postg
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/her24770/BD-quetzal_shop/tree/develop
+git clone https://github.com/her24770/BD-quetzal_shop
 cd BD-quetzal_shop
 ```
 
