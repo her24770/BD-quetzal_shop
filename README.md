@@ -64,9 +64,8 @@ No es necesario cambiar ningun valor para ejecutar el proyecto en desarrollo loc
 
 ## Levantar el proyecto
 
+Luego de clonar y copiar los archivos de configuracion
 ```bash
-cp docker-compose.yml.example docker-compose.yml
-cp .env.example .env
 docker compose up
 ```
 
