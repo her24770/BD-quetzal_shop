@@ -105,6 +105,9 @@ docker compose down -v
 
 ### Acceso a la aplicacion web
 
+Valores predeterminados en roles
+
+
 | Rol       | Correo                      | Contrasena |
 |-----------|-----------------------------|------------|
 | Admin     | admin@quetzalshop.com       | admin123   |
