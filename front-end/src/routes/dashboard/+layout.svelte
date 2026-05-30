@@ -2,6 +2,7 @@
   import { goto, afterNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import { page } from '$app/stores';
   import Navbar from '$lib/components/Navbar.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Toast from '$lib/components/Toast.svelte';
@@ -11,22 +12,53 @@
   import { permisos } from '$lib/stores/permisos';
 
   let sidebarOpen = false;
+  let permisosLoaded = false;
+
+  // Mapa de rutas a los permisos necesarios para acceder
+  const routeRules: Array<{ path: string; check?: [string, string][]; adminOnly?: boolean }> = [
+    { path: '/dashboard/categorias',    check: [['categorias', 'SELECT']] },
+    { path: '/dashboard/proveedores',   check: [['proveedores', 'SELECT']] },
+    { path: '/dashboard/clientes',      check: [['clientes', 'SELECT']] },
+    { path: '/dashboard/productos',     check: [['productos', 'SELECT']] },
+    { path: '/dashboard/empleados',     check: [['empleados', 'SELECT']] },
+    { path: '/dashboard/transacciones', check: [['ventas', 'INSERT'], ['compras', 'INSERT']] },
+    { path: '/dashboard/historial',     check: [['ventas', 'SELECT'], ['compras', 'SELECT']] },
+    { path: '/dashboard/ventas',        check: [['ventas', 'INSERT']] },
+    { path: '/dashboard/compras',       check: [['compras', 'INSERT']] },
+    { path: '/dashboard/admin',         adminOnly: true },
+  ];
+
+  function canAccess(pathname: string): boolean {
+    if (pathname === '/dashboard/forbidden') return true;
+    const rule = routeRules.find(r => pathname === r.path || pathname.startsWith(r.path + '/'));
+    if (!rule) return true;
+    if (rule.adminOnly) return $auth.user?.rol_id === 1;
+    return rule.check!.some(([tabla, op]) => ($permisos[tabla] ?? []).includes(op));
+  }
+
+  function checkAccess(pathname: string) {
+    if (!canAccess(pathname)) goto('/dashboard/forbidden');
+  }
 
   function toggleSidebar() { sidebarOpen = !sidebarOpen; }
   function closeSidebar()  { sidebarOpen = false; }
 
-  afterNavigate(() => { sidebarOpen = false; });
+  afterNavigate(({ to }) => {
+    sidebarOpen = false;
+    if (permisosLoaded && to?.url.pathname) checkAccess(to.url.pathname);
+  });
 
   onMount(async () => {
     if (!$auth.token) {
       goto('/');
       return;
     }
-    // Si el store de permisos está vacío (refresh de página), los recarga del API
     if (Object.keys(get(permisos)).length === 0) {
       const r = await apiFetch('/auth/me/permisos', $auth.token);
       if (r.ok) permisos.load(await r.json());
     }
+    permisosLoaded = true;
+    checkAccess($page.url.pathname);
   });
 </script>
 

@@ -135,7 +135,9 @@ END;
 $$;
 
 
--- SP3: crea un usuario y su empleado en una sola transaccion atomica
+-- SP3: crea un usuario y su empleado en una sola transaccion atomica.
+-- Demuestra ROLLBACK real: primero escribe el usuario, luego valida el DPI;
+-- si el DPI ya existe el ROLLBACK deshace el INSERT de usuarios antes de lanzar la excepcion.
 CREATE OR REPLACE PROCEDURE sp_crear_empleado(
     IN  p_email          VARCHAR(150),
     IN  p_password_hash  VARCHAR(255),
@@ -151,17 +153,24 @@ CREATE OR REPLACE PROCEDURE sp_crear_empleado(
 LANGUAGE plpgsql AS $$
 BEGIN
 
-    -- verifica que el email no este en uso antes de insertar
+    -- validacion previa sin escrituras: email unico
     IF EXISTS (SELECT 1 FROM usuarios WHERE email = p_email) THEN
-        ROLLBACK;
         RAISE EXCEPTION 'El email % ya esta registrado', p_email;
     END IF;
 
+    -- primera escritura: insertar el usuario
     INSERT INTO usuarios (email, password_hash, rol_id)
     VALUES (p_email, p_password_hash, p_rol_id)
     RETURNING id INTO p_usuario_id;
 
-    -- si este insert falla el anterior se deshace junto con el
+    -- validacion DESPUES de la primera escritura: si el DPI ya existe,
+    -- el ROLLBACK deshace el INSERT de usuarios que acaba de ejecutarse
+    IF EXISTS (SELECT 1 FROM empleados WHERE dpi = p_dpi) THEN
+        ROLLBACK;
+        RAISE EXCEPTION 'El DPI % ya esta registrado', p_dpi;
+    END IF;
+
+    -- segunda escritura: insertar el empleado vinculado al usuario creado
     INSERT INTO empleados (usuario_id, dpi, nombre, telefono, cargo, fecha_contrato)
     VALUES (p_usuario_id, p_dpi, p_nombre, p_telefono, p_cargo, p_fecha_contrato)
     RETURNING id INTO p_empleado_id;

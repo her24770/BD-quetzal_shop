@@ -1,46 +1,47 @@
 from database.connection import get_connection, return_connection
 
 
-# Stats generales: usa GROUP BY + COUNT + SUM con FILTER para el dashboard
-def get_stats() -> dict:
+# Stats del dashboard — solo incluye los bloques que el rol tiene SELECT en su tabla
+def get_stats(permisos: dict) -> dict:
+    can = lambda tabla: "SELECT" in permisos.get(tabla, [])
+    result = {}
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    COUNT(*)                                              AS ventas_hoy_count,
-                    COALESCE(SUM(total), 0)                              AS ventas_hoy_total
-                FROM ventas
-                WHERE fecha::date = CURRENT_DATE
-            """)
-            row = cur.fetchone()
-            v_hoy = {"count": int(row[0]), "total": float(row[1])}
+            if can("ventas"):
+                cur.execute("""
+                    SELECT
+                        COUNT(*)             AS ventas_hoy_count,
+                        COALESCE(SUM(total), 0) AS ventas_hoy_total
+                    FROM ventas
+                    WHERE fecha::date = CURRENT_DATE
+                """)
+                row = cur.fetchone()
+                result["ventas_hoy"] = {"count": int(row[0]), "total": float(row[1])}
 
-            cur.execute("""
-                SELECT COALESCE(SUM(total), 0)
-                FROM compras
-                WHERE fecha >= DATE_TRUNC('month', CURRENT_DATE)
-            """)
-            compras_mes = float(cur.fetchone()[0])
+            if can("compras"):
+                cur.execute("""
+                    SELECT COALESCE(SUM(total), 0)
+                    FROM compras
+                    WHERE fecha >= DATE_TRUNC('month', CURRENT_DATE)
+                """)
+                result["compras_mes"] = float(cur.fetchone()[0])
 
-            cur.execute("SELECT COUNT(*) FROM v_stock_bajo")
-            stock_bajo = int(cur.fetchone()[0])
+            if can("productos"):
+                cur.execute("SELECT COUNT(*) FROM v_stock_bajo")
+                result["stock_bajo"] = int(cur.fetchone()[0])
 
-            cur.execute("""
-                SELECT
-                    COUNT(*)                                      AS total,
-                    COUNT(*) FILTER (WHERE estado = 'activo')     AS activos
-                FROM empleados
-            """)
-            row = cur.fetchone()
-            empleados = {"total": int(row[0]), "activos": int(row[1])}
+            if can("empleados"):
+                cur.execute("""
+                    SELECT
+                        COUNT(*)                                  AS total,
+                        COUNT(*) FILTER (WHERE estado = 'activo') AS activos
+                    FROM empleados
+                """)
+                row = cur.fetchone()
+                result["empleados"] = {"total": int(row[0]), "activos": int(row[1])}
 
-            return {
-                "ventas_hoy": v_hoy,
-                "compras_mes": compras_mes,
-                "stock_bajo": stock_bajo,
-                "empleados": empleados,
-            }
+        return result
     finally:
         return_connection(conn)
 

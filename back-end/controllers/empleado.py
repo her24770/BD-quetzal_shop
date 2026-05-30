@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+import psycopg2
 from passlib.context import CryptContext
 from database.queries import empleados as empleados_query
 from schemas.empleado import EmpleadoCreate, EmpleadoUpdate, EmpleadoResponse
@@ -34,11 +35,12 @@ def create(body: EmpleadoCreate, rol_id: int) -> EmpleadoResponse:
             rol_id,
         )
     except Exception as e:
-        if "unique" in str(e).lower() and "email" in str(e).lower():
+        msg = str(e).lower()
+        if "email" in msg:
             raise HTTPException(status_code=409, detail="Ya existe un usuario con ese email")
-        if "unique" in str(e).lower() and "dpi" in str(e).lower():
+        if "dpi" in msg:
             raise HTTPException(status_code=409, detail="Ya existe un empleado con ese DPI")
-        raise HTTPException(status_code=500, detail="Error al crear el empleado")
+        raise HTTPException(status_code=400, detail=str(e).split('\n')[0])
 
 
 # Actualiza solo los campos que vienen en el body (solo telefono, cargo y estado son editables)
@@ -54,8 +56,8 @@ def update(empleado_id: int, body: EmpleadoUpdate) -> EmpleadoResponse:
 def delete(empleado_id: int) -> dict:
     try:
         eliminado = empleados_query.delete(empleado_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except (ValueError, psycopg2.Error) as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e).split('\n')[0])
     if not eliminado:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empleado no encontrado")
     return {"message": "Empleado eliminado correctamente"}

@@ -17,20 +17,28 @@
   let ultimasVentas:        VentaReciente[] = [];
   let loading = true;
 
-  $: token        = $auth.token ?? '';
-  $: user         = $auth.user;
-  $: canVerVentas = ($permisos['ventas'] ?? []).includes('SELECT');
+  $: token           = $auth.token ?? '';
+  $: user            = $auth.user;
+  $: canVerVentas    = ($permisos['ventas']    ?? []).includes('SELECT');
+  $: canVerProductos = ($permisos['productos'] ?? []).includes('SELECT');
+  $: canVerClientes  = ($permisos['clientes']  ?? []).includes('SELECT');
+  $: canVerCompras   = ($permisos['compras']   ?? []).includes('SELECT');
+  $: canVerEmpleados = ($permisos['empleados'] ?? []).includes('SELECT');
 
   onMount(async () => {
     const calls: Promise<void>[] = [
-      reportesApi.getStats(token).then(d           => { stats                  = d; }),
-      reportesApi.getTopProductos(token).then(d    => { topProductos           = d; }),
-      reportesApi.getBajoVendidos(token).then(d    => { productosBajoVendidos  = d; }),
+      reportesApi.getStats(token).then(d => { stats = d; }),
     ];
+    if (canVerProductos) {
+      calls.push(
+        reportesApi.getTopProductos(token).then(d   => { topProductos          = d; }),
+        reportesApi.getBajoVendidos(token).then(d   => { productosBajoVendidos = d; }),
+      );
+    }
     if (canVerVentas) {
       calls.push(
-        reportesApi.getVentasPorMetodo(token).then(d  => { ventasPorMetodo  = d; }),
-        reportesApi.getVentasRecientes(token).then(d  => { ultimasVentas    = d; }),
+        reportesApi.getVentasPorMetodo(token).then(d => { ventasPorMetodo = d; }),
+        reportesApi.getVentasRecientes(token).then(d => { ultimasVentas   = d; }),
       );
     }
     await Promise.all(calls);
@@ -53,38 +61,46 @@
 
 <!-- ── Stats cards ── -->
 <div class="stats-grid">
-  <StatCard
-    label="Ventas del día"
-    value={stats ? formatCurrency(stats.ventas_hoy.total) : 'Q 0.00'}
-    sub="{stats?.ventas_hoy.count ?? 0} transacciones"
-    iconPath={IC.cart}
-    iconBg="#EDE9FE" iconColor="#7C3AED"
-  />
-  <StatCard
-    label="Stock bajo"
-    value={stats?.stock_bajo ?? 0}
-    sub="Productos con alerta"
-    iconPath={IC.alert}
-    iconBg="#FEF3C7" iconColor="#D97706"
-  />
-  <StatCard
-    label="Compras del mes"
-    value={stats ? formatCurrency(stats.compras_mes) : 'Q 0.00'}
-    sub="Acumulado del mes"
-    iconPath={IC.pkg}
-    iconBg="#DBEAFE" iconColor="#2563EB"
-  />
-  <StatCard
-    label="Empleados activos"
-    value={stats?.empleados.activos ?? 0}
-    sub="de {stats?.empleados.total ?? 0} registrados"
-    iconPath={IC.person}
-    iconBg="#D1FAE5" iconColor="#059669"
-  />
+  {#if canVerVentas}
+    <StatCard
+      label="Ventas del día"
+      value={stats ? formatCurrency(stats.ventas_hoy.total) : 'Q 0.00'}
+      sub="{stats?.ventas_hoy.count ?? 0} transacciones"
+      iconPath={IC.cart}
+      iconBg="#EDE9FE" iconColor="#7C3AED"
+    />
+  {/if}
+  {#if canVerProductos}
+    <StatCard
+      label="Stock bajo"
+      value={stats?.stock_bajo ?? 0}
+      sub="Productos con alerta"
+      iconPath={IC.alert}
+      iconBg="#FEF3C7" iconColor="#D97706"
+    />
+  {/if}
+  {#if canVerCompras}
+    <StatCard
+      label="Compras del mes"
+      value={stats ? formatCurrency(stats.compras_mes) : 'Q 0.00'}
+      sub="Acumulado del mes"
+      iconPath={IC.pkg}
+      iconBg="#DBEAFE" iconColor="#2563EB"
+    />
+  {/if}
+  {#if canVerEmpleados}
+    <StatCard
+      label="Empleados activos"
+      value={stats?.empleados.activos ?? 0}
+      sub="de {stats?.empleados.total ?? 0} registrados"
+      iconPath={IC.person}
+      iconBg="#D1FAE5" iconColor="#059669"
+    />
+  {/if}
 </div>
 
 <!-- ── Top 5 productos más vendidos ── -->
-{#if topProductos.length > 0}
+{#if canVerProductos && topProductos.length > 0}
   <div class="section-block">
     <div class="section-head">
       <h3 class="section-title">Top 5 productos más vendidos</h3>
@@ -171,7 +187,7 @@
 {/if}
 
 <!-- ── Productos con stock bajo y vendidos ── -->
-{#if productosBajoVendidos.length > 0}
+{#if canVerProductos && productosBajoVendidos.length > 0}
   <div class="section-block">
     <div class="section-head">
       <h3 class="section-title">Stock bajo — productos populares</h3>

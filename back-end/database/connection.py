@@ -12,6 +12,7 @@ def _make_pool(user: str, password: str) -> psycopg2.pool.SimpleConnectionPool:
         database=settings.DB_NAME,
         user=user,
         password=password,
+        options="-c timezone=America/Guatemala",
     )
 
 

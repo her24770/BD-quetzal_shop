@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+import psycopg2
 from database.queries import compras as compras_query
 from schemas.compra import CompraCreate, CompraResponse, CompraResumen
 
@@ -26,5 +27,5 @@ def crear(body: CompraCreate, empleado_id: int, rol_id: int) -> CompraResponse:
             items,
             rol_id,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except (ValueError, psycopg2.Error) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e).split('\n')[0])

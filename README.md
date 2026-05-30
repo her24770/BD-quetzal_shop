@@ -24,7 +24,6 @@ git checkout proyecto-3
 
 Variables de entorno
 ```bash
-cp docker-compose.yml.example docker-compose.yml
 cp .env.example .env
 ```
 
@@ -213,7 +212,7 @@ BD-quetzal_shop/
 │       │   ├── components/     # Componentes reutilizables
 │       │   └── stores/         # Estado global
 │       └── routes/             # Paginas protegidas por rol
-├── docker-compose.yml.example
+├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```

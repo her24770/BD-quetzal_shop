@@ -87,3 +87,17 @@ def require_role(*allowed_roles: int):
             )
         return current_user
     return role_checker
+
+# Dependencia dinámica — consulta los permisos reales del rol en PostgreSQL.
+# Si el admin cambia permisos desde el dashboard, este check lo refleja de inmediato.
+def require_permission(tabla: str, operacion: str):
+    async def checker(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+        from database.queries.permisos import get_permisos_rol
+        permisos = get_permisos_rol(current_user.rol_id)
+        if operacion not in permisos.get(tabla, []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Tu rol no tiene permiso de {operacion} en {tabla}"
+            )
+        return current_user
+    return checker

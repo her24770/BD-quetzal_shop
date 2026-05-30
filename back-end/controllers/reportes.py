@@ -1,9 +1,9 @@
 from database.queries import reportes as reportes_query
 
 
-# Stats generales para el dashboard: ventas hoy, compras del mes, stock bajo y empleados
-def get_stats() -> dict:
-    return reportes_query.get_stats()
+# Stats del dashboard — solo incluye los bloques que el rol tiene permiso de ver
+def get_stats(permisos: dict) -> dict:
+    return reportes_query.get_stats(permisos)
 
 
 # Top 5 productos más vendidos usando CTE + GROUP BY

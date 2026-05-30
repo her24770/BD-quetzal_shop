@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+import psycopg2
 from database.queries import productos as productos_query
 from schemas.producto import ProductoCreate, ProductoUpdate, ProductoResponse, StockUpdate
 
@@ -46,8 +47,8 @@ def update(producto_id: int, body: ProductoUpdate) -> ProductoResponse:
 def delete(producto_id: int, rol_id: int) -> dict:
     try:
         eliminado = productos_query.delete(producto_id, rol_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except (ValueError, psycopg2.Error) as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e).split('\n')[0])
     if not eliminado:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
     return {"message": "Producto eliminado correctamente"}
@@ -57,5 +58,5 @@ def delete(producto_id: int, rol_id: int) -> dict:
 def actualizar_stock(producto_id: int, body: StockUpdate, rol_id: int) -> dict:
     try:
         return productos_query.actualizar_stock(producto_id, body.cantidad, body.operacion, rol_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except (ValueError, psycopg2.Error) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e).split('\n')[0])
