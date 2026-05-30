@@ -123,9 +123,13 @@ Los 5 usuarios de prueba estan en `back-end/sql/seed.sql` con sus contrasenas ha
 
 #### Rutas y vistas de la UI protegidas segun el rol del usuario autenticado
 
-Cada endpoint del backend declara los roles permitidos mediante dependencias de FastAPI (`require_role`, `require_admin`) en `back-end/dependencies.py`. Si el rol del token no tiene permiso, el endpoint retorna `403 Forbidden`.
+La proteccion funciona en tres capas:
 
-En el frontend, el sidebar filtra los modulos visibles segun el `rol_id` del token. Las rutas del dashboard redirigen al login si no hay sesion activa.
+**Backend — permisos dinamicos:** Cada endpoint usa `require_permission(tabla, operacion)` definido en `back-end/dependencies.py`. En cada request, esta dependencia consulta `information_schema.role_table_grants` en PostgreSQL para verificar si el rol activo tiene el permiso necesario sobre la tabla correspondiente. Si el admin cambia un permiso desde el dashboard (ejecutando `sp_grant_permiso_rol` o `sp_revoke_permiso_rol`), el cambio se refleja de inmediato en todos los endpoints sin reiniciar el servidor.
+
+**Frontend — sidebar y llamadas condicionales:** El sidebar filtra los modulos visibles consultando `GET /auth/me/permisos`, que devuelve los permisos reales del rol desde PostgreSQL. El dashboard solo llama los endpoints de reportes para los que el usuario tiene permiso (no llama endpoints que devolverian 403). Las rutas del dashboard redirigen a una pagina de acceso denegado si el usuario intenta acceder a un modulo sin permiso.
+
+**Sin sesion:** Cualquier ruta del dashboard redirige al login si no hay token activo.
 
 | Modulo           | Admin | Cajero      | Bodeguero    | Gerente  | Auditor  |
 |------------------|:-----:|:-----------:|:------------:|:--------:|:--------:|
@@ -176,7 +180,7 @@ Tres stored procedures implementan `ROLLBACK` explicito en sus rutas de error:
 
 - **`sp_registrar_venta`** — hace `ROLLBACK` explicito antes de lanzar la excepcion si el stock es insuficiente o el producto no existe, garantizando que ningun dato quede escrito en la BD.
 - **`sp_registrar_compra`** — hace `ROLLBACK` explicito si el producto o proveedor referenciado en los items no existe.
-- **`sp_crear_empleado`** — hace `ROLLBACK` explicito si el email ya esta registrado antes de intentar cualquier INSERT.
+- **`sp_crear_empleado`** — demuestra ROLLBACK real despues de una escritura: primero inserta el usuario en `usuarios`, luego valida que el DPI no exista en `empleados`; si el DPI ya esta registrado, el `ROLLBACK` deshace el INSERT del usuario que acaba de ejecutarse. La validacion del email ocurre antes de cualquier escritura (sin necesidad de ROLLBACK).
 
 ---
 
