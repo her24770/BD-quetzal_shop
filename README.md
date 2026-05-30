@@ -38,6 +38,15 @@ docker compose up
 | Backend API   | http://localhost:8000      |
 | Documentacion | http://localhost:8000/docs |
 
+> **Nota sobre puertos:** No es necesario cambiar los puertos para levantar el proyecto.
+> Si necesitas cambiarlos, revisa los comentarios en `.env.example` — cada variable
+> indica qué otras variables deben actualizarse en conjunto para evitar errores.
+>
+> Resumen rápido de dependencias:
+> - `APP_PORT` cambia → actualizar `VITE_API_URL` con el mismo puerto
+> - `FRONTEND_PORT` cambia → actualizar `CORS_ORIGINS` con el mismo puerto
+> - `DB_PORT` y `DB_HOST` → **no cambiar**, son internos de Docker
+
 ---
 
 ## Credenciales
